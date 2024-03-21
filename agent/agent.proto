@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package agent;
+
+option go_package = "./agent";
+
+message PatchWorkloadRequest {
+  string namespace = 1;
+  string workload_name = 2;
+  string container = 3;
+  string image = 4;
+}
+
+message ListWorkloadRequest {
+  string namespace = 1;
+  string label_selector = 2;
+}
+
+message GetWorkloadRequest {
+  string namespace = 1;
+  string workload_name = 2;
+}
+
+message GetPodEventRequest {
+  string namespace = 1;
+  string pod_name = 2;
+}
+
+message YamlRequest {
+  string namespace = 1;
+  string ymlstring = 2;
+}
+
+message RolloutWorkloadRequest {
+  string namespace = 1;
+  string workload_name = 2;
+}
+
+message GetYamlRequest {
+  string namespace = 1;
+  string resource_type = 2;
+  string resource_name = 3;
+}
+
+message ScaleRequest {
+  string namespace = 1;
+  string workload_name = 2;
+  uint32 replicas = 3;
+}
+
+message LabelSelector {
+  string label_selector = 1;
+}
+
+message Response {
+  uint32 code = 1;
+  string message = 2;
+  bytes data = 3;
+}
+
+message YamlResponse {
+  uint32 code = 1;
+  string data = 2;
+}
+
+service LizardAgent {
+  rpc patchDeployment(PatchWorkloadRequest) returns(Response);
+  rpc patchStatefulset(PatchWorkloadRequest) returns(Response);
+  rpc listDeployment(ListWorkloadRequest) returns(Response);
+  rpc listStatefulset(ListWorkloadRequest) returns(Response);
+  rpc getDeploymentPod(GetWorkloadRequest) returns(Response);
+  rpc getStatefulsetPod(GetWorkloadRequest) returns(Response);
+  rpc getPodEvent(GetPodEventRequest) returns(Response);
+  rpc deleteYaml(YamlRequest) returns(Response);
+  rpc applyYaml(YamlRequest) returns(Response);
+	rpc getyaml(GetYamlRequest) returns(YamlResponse);
+  rpc rolloutDeployment(RolloutWorkloadRequest) returns(Response);
+  rpc rolloutStatefulset(RolloutWorkloadRequest) returns(Response);
+  rpc scaleDeployment(ScaleRequest) returns(Response);
+  rpc scaleStatefulset(ScaleRequest) returns(Response);
+  rpc getNamespaces(LabelSelector) returns(Response);
+}

@@ -1,0 +1,13 @@
+Name: lizardServer
+Host: 0.0.0.0
+Port: 5117
+Timeout: 60000
+Log:
+  Encoding: plain
+  Level: info 
+Prometheus:
+  Host: 0.0.0.0
+  Port: 15117
+  Path: /metrics
+Consul:
+  Address: 10.50.89.17:8086
