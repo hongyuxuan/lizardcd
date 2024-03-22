@@ -18,12 +18,10 @@ export default defineConfig({
   server: {
     proxy: {
       '/consul': {
-        // target: 'http://lizardcd-server.fiofa-ofa-bdev.cicc.io',
         target: 'http://localhost:5117',
         changeOrigin: true,
       },
       '/lizardcd': {
-        // target: 'http://lizardcd-server.fiofa-ofa-bdev.cicc.io',
         target: 'http://localhost:5117',
         changeOrigin: true,
       },

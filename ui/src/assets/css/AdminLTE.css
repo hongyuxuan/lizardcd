@@ -4425,11 +4425,6 @@ table.text-center th {
   color: #fff;
 }
 
-.bg-linear-cicc {
-  background-image: linear-gradient(108deg, #2a0505, #be8c4b);
-  color: #fff;
-}
-
 [class^="bg-"].disabled {
   opacity: 0.65;
   filter: alpha(opacity=65);
