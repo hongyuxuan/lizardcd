@@ -1,4 +1,4 @@
-FROM repo.cicc.com.cn/public-docker-virtual/nginx:1.24
+FROM nginx:1.24
 
 COPY dist/ /usr/share/nginx/html/
 

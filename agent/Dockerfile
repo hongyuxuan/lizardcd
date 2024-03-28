@@ -1,4 +1,4 @@
-FROM repo.cicc.com.cn/public-docker-virtual/alpine:3.19.1
+FROM alpine:3.19.1
 ADD bin/lizardcd-agent /opt
 WORKDIR /opt
 RUN chmod +x /opt/lizardcd-agent

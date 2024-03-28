@@ -238,10 +238,8 @@ ul:not(.el-upload-list) {
 
 /* os-family */
 .os-family {
-  /* background: url("http://minio-api.ficc-ofa-dev.cicc.io/fiops/images/logo/os-logo.png") no-repeat; */
   width: 20px;
   height: 20px;
-  /* background-size: 90px; */
   vertical-align: middle;
   display: inline-block;
 }
