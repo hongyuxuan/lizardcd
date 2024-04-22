@@ -1,0 +1,19 @@
+Name: lizardServer
+Host: 0.0.0.0
+Port: 5117
+Timeout: 60000
+Log:
+  Encoding: plain
+  Level: info 
+Prometheus:
+  Host: 0.0.0.0
+  Port: 15117
+  Path: /metrics
+Auth:
+  AccessSecret: wLnOk8keh/WO5u7lX8H1dB1/mcuHvnI/jfWCMXMPg9o=
+  AccessExpire: 86400
+# Consul:
+#   Address: 10.50.89.17:8086
+Etcd:
+  Address: 10.50.89.17:8089
+Sqlite: ./lizardcd.db

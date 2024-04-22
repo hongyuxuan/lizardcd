@@ -1,0 +1,24 @@
+Name: LizardAgent
+ListenOn: 0.0.0.0:5017
+Timeout: 60000
+Log:
+  Encoding: plain
+  Level: info 
+Prometheus:
+  Host: 0.0.0.0
+  Port: 15017
+  Path: /metrics
+Kubeconfig: kubeconfig
+# Consul:
+#   Host: 10.50.89.17:8086
+#   Key: lizardcd-agent.*.tektonk8s # lizardcd-agent.<namespace>.<cluster>
+#   Meta:
+#     Protocol: grpc
+#     Service: lizardcd-agent
+#     Namespace: '*'
+#     Cluster: tektonk8s
+#   TTL: 60
+Etcd:
+  Hosts:
+    - 10.50.89.17:8089
+  Key: lizardcd-agent.*.tektonk8s

@@ -1,0 +1,160 @@
+---
+name: application_template_base
+content: |
+  kind: Deployment
+  apiVersion: apps/v1
+  metadata:
+    name: {{ .Appname }}
+    namespace: {{ .Namespace }}
+    labels:
+      app: {{ .Appname }}
+    annotations:
+      lizardcd/creator: lizardcd
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: {{ .Appname }}
+    template:
+      metadata:
+        labels:
+          app: {{ .Appname }}
+      spec:
+        volumes:
+          - name: host-time
+            hostPath:
+              path: /etc/localtime
+              type: ''
+          - name: timezone
+            hostPath:
+              path: /etc/timezone
+              type: ''
+        containers:
+          - name: {{ .Appname }}-container
+            image: {{ .Image }}
+            ports:
+              - name: tcp
+                containerPort: {{ .Port }}
+                protocol: TCP
+            resources:
+              limits:
+                cpu: 200m
+                memory: 200Mi
+              requests:
+                cpu: 100m
+                memory: 100Mi
+            volumeMounts:
+              - name: timezone
+                readOnly: true
+                mountPath: /etc/timezone
+              - name: host-time
+                readOnly: true
+                mountPath: /etc/localtime
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            imagePullPolicy: Always
+        restartPolicy: Always
+        terminationGracePeriodSeconds: 30
+        dnsPolicy: ClusterFirst
+        serviceAccountName: default
+        serviceAccount: default
+        securityContext: {}
+        schedulerName: default-scheduler
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 25%
+        maxSurge: 25%
+    revisionHistoryLimit: 10
+    progressDeadlineSeconds: 600
+variables: |
+  [{"key":"Appname","value":"lizardtest"},{"key":"Image","value":"nginx"},{"key":"Port","value":8080},{"key":"Namespace","value":"default"}]
+---
+name: application_template_with_service
+content: |
+  kind: Deployment
+  apiVersion: apps/v1
+  metadata:
+    name: {{ .Appname }}
+    namespace: {{ .Namespace }}
+    labels:
+      app: {{ .Appname }}
+    annotations:
+      lizardcd/creator: lizardcd
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: {{ .Appname }}
+    template:
+      metadata:
+        labels:
+          app: {{ .Appname }}
+      spec:
+        volumes:
+          - name: host-time
+            hostPath:
+              path: /etc/localtime
+              type: ''
+          - name: timezone
+            hostPath:
+              path: /etc/timezone
+              type: ''
+        containers:
+          - name: {{ .Appname }}-container
+            image: {{ .Image }}
+            ports:
+              - name: tcp
+                containerPort: {{ .Port }}
+                protocol: TCP
+            resources:
+              limits:
+                cpu: 200m
+                memory: 200Mi
+              requests:
+                cpu: 100m
+                memory: 100Mi
+            volumeMounts:
+              - name: timezone
+                readOnly: true
+                mountPath: /etc/timezone
+              - name: host-time
+                readOnly: true
+                mountPath: /etc/localtime
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            imagePullPolicy: Always
+        restartPolicy: Always
+        terminationGracePeriodSeconds: 30
+        dnsPolicy: ClusterFirst
+        serviceAccountName: default
+        serviceAccount: default
+        securityContext: {}
+        schedulerName: default-scheduler
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 25%
+        maxSurge: 25%
+    revisionHistoryLimit: 10
+    progressDeadlineSeconds: 600
+  ---
+  kind: Service
+  apiVersion: v1
+  metadata:
+    name: {{ .Appname }}
+    namespace: {{ .Namespace }}
+    annotations:
+      lizardcd/creator: lizardcd
+  spec:
+    ports:
+      - name: tcp
+        protocol: TCP
+        port: {{ .Port }}
+        targetPort: tcp
+    selector:
+      app: {{ .Appname }}
+    type: ClusterIP
+    sessionAffinity: None
+variables: |
+  [{"key":"Appname","value":"lizardtest"},{"key":"Image","value":"nginx"},{"key":"Port","value":8080},{"key":"Namespace","value":"default"}]
