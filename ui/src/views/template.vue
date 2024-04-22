@@ -154,6 +154,12 @@ const editOne = async (row) => {
   edit.value = true
   show.value = true
 }
+const copyOne = async (row) => {
+  form.value = Object.assign({}, row)
+  delete form.value.id
+  edit.value = false
+  show.value = true
+}
 const addVar = (index) => {
   form.value.variables.splice(index+1, 0, {key:"", value:""})
 }
