@@ -1,0 +1,318 @@
+info (
+	author: "hongyx2014@126.com"
+	date: "2024-03-11"
+	desc: "lizardcd云原生CD项目服务端API"
+	version: "v1.0.0"
+)
+
+type (
+	PatchWorkloadReq {
+		Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+		WorkloadName string `path:"workload_name"`
+		Container    string `form:"container"`
+		Image        string `form:"image"`
+	}
+
+	ListWorkloadReq {
+		Cluster       string `path:"cluster"`
+		Namespace     string `path:"namespace"`
+		LabelSelector string `form:"label_selector,optional"`
+	}
+
+	RolloutReq {
+		Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+		WorkloadName string `path:"workload_name"`
+	}
+
+	ResourceReq {
+		Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+		ResourceType string `path:"resource_type"`
+		ResourceName string `path:"resource_name"`
+	}
+
+	PatchYamlReq {
+		Cluster   string                 `path:"cluster"`
+		Namespace string                 `path:"namespace"`
+		Content   string                 `json:"content"`
+		Variables map[string]interface{} `json:"variables,optional"`
+	}
+
+	ScaleReq {
+		Cluster   string          `path:"cluster"`
+		Namespace string          `path:"namespace"`
+		Workloads []ScaleWorkload `json:"workloads"`
+	}
+
+	ScaleWorkload {
+		Name     string `json:"name"`
+		Replicas int    `json:"replicas"`
+		Disabled bool   `json:"disabled,optional"`
+	}
+
+	GetServiceReq {
+		ServiceName string `path:"service_name"`
+	}
+
+	GetPodEventReq {
+		Cluster   string `path:"cluster"`
+		Namespace string `path:"namespace"`
+		PodName   string `path:"pod_name"`
+	}
+
+	DataByIdReq {
+		Tablename string `path:"tablename"`
+		Id        string `path:"id"`
+	}
+
+	CreateDataReq {
+		Tablename string                 `path:"tablename"`
+		Body      map[string]interface{} `json:"body"`
+	}
+
+	UpdateDataReq {
+		DataByIdReq
+		Body map[string]interface{} `json:"body"`
+	}
+
+	LoginReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	ChpasswdReq {
+		Username    string `json:"username"`
+		OldPassword string `json:"oldPassword"`
+		NewPassword string `json:"newPassword"`
+	}
+
+	ListTagsReq {
+		AppName string `form:"app_name"`
+	}
+
+	Response {
+		Code    int         `json:"code"`
+		Data    interface{} `json:"data,omitempty"`
+		Message string      `json:"message,omitempty"`
+	}
+)
+
+@server(
+	prefix: /lizardcd
+	group: lizardcd
+	jwt: Auth
+)
+service lizardServer {
+	@doc(
+		summary: 获取注册的服务列表
+	)
+	@handler listservices
+	get /services returns (Response)
+	
+	@doc(
+		summary: 获取注册的服务详情
+	)
+	@handler getservice
+	get /services/:service_name (GetServiceReq) returns (Response)
+	
+	@doc(
+		summary: 根据注册的服务获取集群和ns
+	)
+	@handler listclusters
+	get /clusters returns (Response)
+	
+	@doc(
+		summary: 根据应用配置获取镜像仓库tags
+	)
+	@handler listimagetags
+	get /repo/image/tags (ListTagsReq) returns (Response)
+}
+
+@server(
+	prefix: /kubernetes
+	group: kubernetes
+	jwt: Auth
+)
+service lizardServer {
+	@doc(
+		summary: 更新deployment
+	)
+	@handler patchDeployment
+	patch /cluster/:cluster/namespace/:namespace/deployments/:workload_name (PatchWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 更新statefulset
+	)
+	@handler patchStatefulset
+	patch /cluster/:cluster/namespace/:namespace/statefulsets/:workload_name (PatchWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 重启deployment
+	)
+	@handler rolloutDeployment
+	patch /cluster/:cluster/namespace/:namespace/deployments/:workload_name/rollout (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 重启statefulset
+	)
+	@handler rolloutStatefulset
+	patch /cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/rollout (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 设置deployment副本数
+	)
+	@handler scaleDeployment
+	patch /cluster/:cluster/namespace/:namespace/deployments/scale (ScaleReq) returns (Response)
+	
+	@doc(
+		summary: 设置statefulset副本数
+	)
+	@handler scaleStatefulset
+	patch /cluster/:cluster/namespace/:namespace/statefulsets/scale (ScaleReq) returns (Response)
+	
+	@doc(
+		summary: 获取yaml配置
+	)
+	@handler getYaml
+	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml (ResourceReq) returns (string)
+	
+	@doc(
+		summary: 删除资源
+	)
+	@handler deleteResource
+	delete /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name (ResourceReq) returns (Response)
+	
+	@doc(
+		summary: 更新yaml
+	)
+	@handler patchYaml
+	patch /cluster/:cluster/namespace/:namespace/apply/yaml (PatchYamlReq) returns (Response)
+	
+	@doc(
+		summary: 获取deployments列表
+	)
+	@handler listDeployment
+	get /cluster/:cluster/namespace/:namespace/deployments (ListWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 获取statefulsets列表
+	)
+	@handler listStatefulset
+	get /cluster/:cluster/namespace/:namespace/statefulsets (ListWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 获取deploymentPods状态
+	)
+	@handler deploymentPods
+	get /cluster/:cluster/namespace/:namespace/deployments/:workload_name/pods (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 获取statefulsetPods状态
+	)
+	@handler statefulsetPods
+	get /cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/pods (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 获取Pod事件
+	)
+	@handler podEvents
+	get /cluster/:cluster/namespace/:namespace/pods/:pod_name/events (GetPodEventReq) returns (Response)
+}
+
+type (
+	GetDataReq {
+		Tablename string `path:"tablename"`
+		Page      int    `form:"page,default=1"`
+		Size      int    `form:"size,default=20"`
+		Search    string `form:"search,optional"`
+		Filter    string `form:"filter,optional"`
+		Range     string `form:"range,optional"`
+		Sort      string `form:"sort,optional"`
+	}
+)
+@server(
+	prefix: /db
+	group: db
+	jwt: Auth
+)
+service lizardServer {
+	@doc(
+		summary: 获取表数据
+	)
+	@handler listdata
+	get /:tablename (GetDataReq) returns (Response)
+	
+	@doc(
+		summary: 根据ID获取表数据
+	)
+	@handler getdata
+	get /:tablename/:id (DataByIdReq) returns (Response)
+	
+	@doc(
+		summary: 新增表数据
+	)
+	@handler createdata
+	post /:tablename (CreateDataReq) returns (Response)
+	
+	@doc(
+		summary: 根据ID更新数据
+	)
+	@handler updatedata
+	put /:tablename/:id (UpdateDataReq) returns (Response)
+	
+	@doc(
+		summary: 根据ID删除数据
+	)
+	@handler deletedata
+	delete /:tablename/:id (DataByIdReq) returns (Response)
+}
+
+@server (
+	prefix: /auth
+	group: auth
+)
+service lizardServer {
+	@doc(
+		summary: 登录成功后返回jwtToken
+	)
+	@handler login
+	post /login (LoginReq)
+}
+
+@server (
+	prefix: /auth
+	group: auth
+	jwt: Auth
+)
+service lizardServer {
+	@doc(
+		summary: 获取用户登录信息
+	)
+	@handler userinfo
+	get /user/info returns (Response)
+	
+	@doc(
+		summary: 修改密码
+	)
+	@handler chpasswd
+	post /chpasswd (ChpasswdReq) returns (Response)
+}
+
+type (
+	StaticReq {
+		Filename string `path:"filename"`
+	}
+)
+@server (
+	prefix: /server-static
+	group: static
+)
+service lizardServer {
+	@doc(
+		summary: 映射静态文件
+	)
+	@handler docfile
+	get /docs/:filename (StaticReq)
+}

@@ -1,0 +1,540 @@
+<template>
+<el-breadcrumb :separator-icon="ArrowRight">
+  <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+  <el-breadcrumb-item>工作负载</el-breadcrumb-item>
+  <el-breadcrumb-item>部署</el-breadcrumb-item>
+</el-breadcrumb>
+<el-card>
+  <template #header>
+    <div class="card-header">
+      <span class="card-header-text">部署</span>
+      <span class="pull-right pointer" @click="getList(true)"><el-icon><Refresh /></el-icon></span>
+    </div>
+  </template>
+  <el-row>
+    <el-col :span="12">
+      <el-button-group>
+        <el-select v-model="cluster" placeholder="请选择集群" clearable filterable style="width:200px;margin-right:8px" size="large">
+          <el-option v-for="(v,k) in clusterList" :key="k" :label="k" :value="k" />
+        </el-select>
+        <el-select v-model="namespace" placeholder="请选择命名空间" clearable filterable @change="getList(true)" style="width:200px;margin-right:8px" size="large">
+          <el-option v-for="(item) in clusterList[cluster]" :key="item" :label="item" :value="item" />
+        </el-select>
+        <el-input v-model="searchKey" placeholder="输入名称进行搜索" size="large" :prefix-icon="Search" @change="getPage(1)" clearable style="width:200px;" />
+      </el-button-group>
+    </el-col>
+    <el-col :span="12">
+      <el-button class="pull-right" size="large" type="primary" @click="show.new=true;formNew={content:'',variables:[]}" style="margin-right:5px">新建工作负载</el-button>
+    </el-col>
+  </el-row>
+  <el-table 
+    :data="list" 
+    :show-header="false" 
+    v-loading="loading"
+    element-loading-text="奋力加载中..."
+    class="line-height40" 
+    style="width:100%;margin-top:10px;min-height:150px">
+    <el-table-column label="" width="45">
+      <font-awesome-icon icon="layer-group" style="font-size:25px;vertical-align:middle;" />
+    </el-table-column>
+    <el-table-column prop="name" label="名称" min-width="200">
+      <template #default="scope">
+        <el-link :underline="false" @click="openDeploy(scope.row)">{{ scope.row.name }}</el-link>
+      </template>
+    </el-table-column>
+    <el-table-column label="状态" min-width="200">
+      <template #default="scope">
+        <font-awesome-icon icon="circle" v-if="scope.row.replicas==0" class="runningstatus text-gray" />
+        <font-awesome-icon icon="circle" v-else-if="scope.row.available=='False'" class="runningstatus twinkling text-yellow" />
+        <font-awesome-icon icon="circle" v-else-if="scope.row.available=='True'" class="runningstatus text-green" />
+        <span v-if="scope.row.replicas === 0">停止 ( {{ scope.row.readyReplicas }} / {{ scope.row.replicas }} )</span>
+        <span v-else>{{ scope.row.available === 'True' ? '运行中' : '更新中' }} ( {{ scope.row.readyReplicas }} / {{ scope.row.replicas }} )</span>
+      </template>
+    </el-table-column>
+    <el-table-column label="更新时间">
+      <template #default="scope">
+        {{ moment(scope.row.lastUpdateTime).format('YYYY-MM-DD HH:mm:ss') }}
+      </template>
+    </el-table-column>
+    <el-table-column label="操作" width="120">
+      <template #default="scope">
+        <el-dropdown @command="handleCommand" style="vertical-align:middle;">
+          <el-button>更多操作<el-icon class="el-icon--right"><arrow-down /></el-icon></el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="{action:'restart',row:scope.row}">重启</el-dropdown-item>
+              <el-dropdown-item :command="{action:'setImage',row:scope.row}">设置镜像</el-dropdown-item>
+              <el-dropdown-item :command="{action:'scale',row:scope.row}">设置副本</el-dropdown-item>
+              <el-dropdown-item :command="{action:'yaml',row:scope.row}">编辑YAML</el-dropdown-item>
+              <el-dropdown-item :command="{action:'delete',row:scope.row}">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </template>
+    </el-table-column>
+  </el-table>
+  <el-pagination 
+      class="pull-right"
+      background 
+      v-model:page-size="pageSize"
+      :page-sizes="[20, 30, 50, 100]"
+      layout="total, sizes, prev, pager, next, jumper" 
+      :total="pageTotal"
+      @current-change="getPage"
+      v-model:current-page="current" />
+</el-card>
+<el-dialog v-model="show.pods" :title="currentDeploy.name" width="80%">
+  <el-table :data="podList" :show-header="false" style="width:100%;">
+      <el-table-column label="icon" width="60">
+        <template #default="scope">
+          <font-awesome-icon icon="cubes" style="font-size:25px" />
+          <font-awesome-icon icon="circle" v-if="scope.row.status.ready=='False'" class="podstatus twinkling text-yellow" />
+          <font-awesome-icon icon="circle" v-if="scope.row.status.ready=='True'" class="podstatus text-green" />
+        </template>
+      </el-table-column>
+      <el-table-column>
+        <template #default="scope">
+          <div><b>{{scope.row.pod_name}}</b></div>
+          <div v-if="scope.row.state==='waiting'" class="text-yellow">
+            <el-icon><WarningFilled /></el-icon>
+            {{scope.row.state_message}}
+          </div>
+          <div v-else-if="scope.row.state==='terminated'" class="text-red">
+            <el-icon><WarningFilled /></el-icon>
+            {{scope.row.state_message}}
+          </div>
+          <div v-else class="text-gray">{{scope.row.state_message}}</div>
+        </template>
+      </el-table-column>
+      <el-table-column>
+        <template #default="scope">
+          <div>{{scope.row.node_name}} ( {{scope.row.hostip}} )</div>
+          <div class="text-gray">Worker Node</div>
+        </template>
+      </el-table-column>
+      <el-table-column>
+        <template #default="scope">
+          <div>{{scope.row.podip}}</div>
+          <div class="text-gray">Pod IP</div>
+        </template>
+      </el-table-column>
+      <el-table-column width="100">
+        <template #default="scope">
+          <el-link type="primary" :underline="false" @click="getEvents(scope.row)">查看</el-link>
+          <div class="text-gray">Events</div>
+        </template>
+      </el-table-column>
+      <el-table-column type="expand" width="45">
+        <template #default="scope">
+          <div style="padding-left:30px">
+            <div class="text-gray" style="line-height:30px">Containers</div>
+            <el-table :data="scope.row.status.containerStatuses" :show-header="false">
+              <el-table-column width="60">
+                <template #default="props">
+                  <el-image style="width:30px;height:30px" src="/images/docker.svg" />
+                  <font-awesome-icon icon="circle" v-if="props.row.ready==false" class="twinkling podstatus text-yellow" />
+                  <font-awesome-icon icon="circle" v-else class="podstatus text-green" />
+                </template>
+              </el-table-column>
+              <el-table-column>
+                <template #default="props">
+                  <div><b>{{props.row.name}}</b></div>
+                  <div class="text-gray" v-if="props.row.ready==true">{{props.row.image}}</div>
+                  <div class="text-gray" v-else>{{props.row.state_message}}</div>
+                </template>
+              </el-table-column>
+              <el-table-column min-width="15%">
+                <template #default="props">
+                  <div>{{props.row.status}}</div>
+                  <div class="text-gray">Status</div>
+                </template>
+              </el-table-column>
+              <el-table-column min-width="15%">
+                <template #default="props">
+                  <div>{{props.row.restartCount}}</div>
+                  <div class="text-gray">Restart Count</div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
+</el-dialog>
+<el-dialog
+  v-model="show.event"
+  :title="`${currentPod.pod_name} 事件`"
+  width="70%">
+  <el-table :data="eventList" style="width:100%">
+    <el-table-column prop="type" label="Type" />
+    <el-table-column prop="reason" label="Reason" />
+    <el-table-column prop="age" label="Age" />
+    <el-table-column prop="source.component" label="From" />
+    <el-table-column prop="message" label="Message" min-width="300px" />
+  </el-table>
+</el-dialog>
+<el-drawer v-model="show.new" direction="rtl" size="800px">
+  <template #header>
+    <h4>新建工作负载</h4>
+  </template>
+  <template #default>
+    <el-form ref="refNew" :model="formNew" label-width="120px">
+      <el-form-item label="集群" prop="cluster">
+        <el-select 
+          v-model="formNew.cluster" 
+          placeholder="请选择集群" 
+          clearable 
+          filterable 
+          style="width:100%;margin-right:8px" 
+          size="large">
+          <el-option v-for="(v,k) in clusterList" :key="k" :label="k" :value="k" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="命名空间" prop="namespace">
+        <el-select v-model="formNew.namespace" placeholder="请选择命名空间" clearable filterable style="width:100%" size="large">
+          <el-option v-for="(item) in clusterList[formNew.cluster]" :key="item" :label="item" :value="item" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="从模板导入" prop="templates">
+        <el-select 
+          v-model="formNew.templates" 
+          placeholder="请选择模板" 
+          value-key="id" 
+          clearable 
+          size="large"
+          style="width:100%" 
+          @change="selectTemplate">
+          <el-option v-for="item in templateList" :key="item.id" :label="item.name" :value="item">
+            <span style="float:left">{{item.name}}</span>
+          </el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="模板定义" prop="content">
+        <v-ace-editor
+          v-model:value="formNew.content"
+          lang="yaml"
+          theme="chrome"
+          style="width:100%;height:700px"
+          :options="{
+            enableBasicAutocompletion: true,
+            enableSnippets: true,
+            enableLiveAutocompletion: true,
+            tabSize: 2,
+            showPrintMargin: false,
+            fontSize: 14
+          }" />
+      </el-form-item>
+      <el-form-item label="模板变量">
+        <table class="table table-bordered">
+          <thead><tr><th>变量名</th><th>默认变量值</th></tr></thead>
+          <tbody>
+          <tr v-for="(item,index) in formNew.variables" :key="index" >
+            <td><el-input v-model="item.key" size="large" /></td>
+            <td><el-input v-model="item.value" size="large" /></td>
+            <td width="100">
+              <el-button icon="Plus" circle @click="addVar(index)"></el-button>
+              <el-button icon="Close" circle @click="removeVar(index)"></el-button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </el-form-item>
+    </el-form>
+  </template>
+  <template #footer>
+    <div style="flex: auto">
+      <el-button @click="show.new=false">取消</el-button>
+      <el-button type="primary" @click="submitNew(refNew)">提交</el-button>
+    </div>
+  </template>
+</el-drawer>
+<el-drawer v-model="show.yaml" direction="rtl" size="70%">
+  <template #header>
+    <h4>编辑YAML</h4>
+  </template>
+  <template #default>
+    <v-ace-editor
+      v-model:value="yamlContent"
+      lang="yaml"
+      theme="chrome"
+      style="width:100%;height:750px"
+      :options="{
+        enableBasicAutocompletion: true,
+        enableSnippets: true,
+        enableLiveAutocompletion: true,
+        tabSize: 2,
+        showPrintMargin: false,
+        fontSize: 14
+      }" />
+  </template>
+  <template #footer>
+    <div style="flex: auto">
+      <el-button @click="show.yaml=false">取消</el-button>
+      <el-button type="primary" @click="submitYaml">提交</el-button>
+    </div>
+  </template>
+</el-drawer>
+</template>
+
+<script setup>
+import { ArrowRight,Search,Refresh } from '@element-plus/icons-vue'
+import { onBeforeMount, onBeforeUnmount, ref, reactive } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { axios } from '/src/assets/util/axios'
+import moment from 'moment'
+import _ from 'lodash'
+/* 引入v-ace-editor */
+import { VAceEditor } from 'vue3-ace-editor'
+import 'ace-builds/src-noconflict/mode-yaml'
+import 'ace-builds/src-noconflict/theme-chrome'
+import 'ace-builds/src-noconflict/ext-language_tools'
+/* 变量定义 */
+const all = ref([])
+const searchKey = ref("")
+const list = ref([])
+const pageSize = ref(10)
+const pageTotal = ref(0)
+const current = ref(1)
+const cluster = ref("")
+const clusterList = ref({})
+const namespace = ref("")
+const show = ref({
+  pods: false,
+  event: false,
+  new: false,
+  yaml: false
+})
+const currentDeploy = ref({})
+const currentPod = ref({})
+const podList = ref([])
+const eventList = ref([])
+const loading = ref(false)
+/* 新建发布 */
+const formNew = ref({content:'',variables:[]})
+const templateList = ref([])
+const refNew = ref(null)
+const timer = ref(null)
+/* YAML配置 */
+const yamlContent = ref("")
+/* 生命周期函数 */
+onBeforeMount(async () => {
+  getClusterList()
+  timer.value = setInterval(() => {
+    getList(false)
+  }, 15000)
+  getTemlates()
+})
+onBeforeUnmount(() => {
+  if(timer) {
+    clearInterval(timer.value)
+    timer.value = null
+  }
+})
+/* methods */
+const getClusterList = async () => {
+  clusterList.value = await axios.get(`/lizardcd/clusters`)
+}
+const getList = async (ifLoading) => {
+  if(ifLoading) loading.value = true
+  if(cluster.value !== "" && namespace.value !== "") {
+    let response = await axios.get(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments`)
+    response = response.map(x => {
+      let progress = x.status.conditions.find(n => n.type === 'Progressing')
+      let r = {
+        name: x.metadata.name,
+        replicas: x.status.replicas||0,
+        readyReplicas: x.status.readyReplicas||0,
+        unavailableReplicas: x.status.unavailableReplicas||0,
+        lastUpdateTime: progress?.lastUpdateTime
+      }
+      r.available = r.readyReplicas >= r.replicas ? 'True' : 'False'
+      return r
+    })
+    all.value = _.sortBy(response, 'lastUpdateTime').reverse()
+    getPage(current.value)
+  }
+  if(ifLoading) loading.value = false
+}
+const getPage = async (page) => {
+  let tmpList = all.value
+  if(searchKey.value !== '') {
+    tmpList = all.value.filter(n => n.name.includes(searchKey.value))
+  }
+  pageTotal.value = tmpList.length
+  list.value = tmpList.slice((page-1)*pageSize.value, page*pageSize.value)
+}
+const openDeploy = async (row) => {
+  currentDeploy.value = row
+  let response = await axios.get(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments/${row.name}/pods`)
+  podList.value = response.map(x => {
+    let status = x.status.conditions.find(n => {
+      return n.type == 'Ready'
+    })
+    let m = {
+      node_name: x.spec.nodeName,
+      hostip: x.status.hostIP,
+      podip: x.status.podIP,
+      pod_name: x.metadata.name,
+      status: {
+        ready: status?.status||'False',
+      },
+    }
+    let containerStatuses = x.status.containerStatuses?.map(y => {
+      y.state_message = y.image
+      y.status = Object.keys(y.state)[0]
+      if(y.status!=='running') y.state_message = y.state[y.status].reason
+      return y
+    }) || x.spec.containers.map(y => {  // 无法调度的pod没有containerStatuses字段
+      return {
+        name: y.name,
+        state_message: x.status.conditions[0].reason,
+        status: 'waiting'
+      }
+    })
+    let initContainerStatuses = x.status.initContainerStatuses?.map(y => {
+      y.state_message = y.image
+      y.status = Object.keys(y.state)[0]
+      if(y.status!=='running') y.state_message = y.state[y.status].reason
+      return y
+    }) || x.spec.initContainers?.map(y => {  // 无法调度的pod没有containerStatuses字段
+      return {
+        name: y.name,
+        state_message: x.status.conditions[0].reason,
+        status: 'waiting'
+      }
+    }) || []
+    m.status.containerStatuses = containerStatuses.concat(initContainerStatuses)
+    m.state = m.status.containerStatuses[0].status // running/waiting/terminated
+    if(m.state === 'running')
+      m.state_message = `Created ${moment.duration(moment(m.status.containerStatuses[0].state.running.startedAt)-moment()).humanize(true)}`
+    else
+      m.state_message = m.status.containerStatuses[0].state_message
+    return m
+  })
+  show.value.pods = true
+}
+const getEvents = async (row) => {
+  currentPod.value = row
+  let response = await axios.get(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/pods/${row.pod_name}/events`)
+  eventList.value = response.map(x => {
+    x.age = moment.duration(moment(x.lastTimestamp)-moment()).humanize(true)
+    return x
+  })
+  show.value.event = true
+}
+const handleCommand = async (command) => {
+  switch(command.action) {
+    case "restart": {
+      await ElMessageBox.confirm('确定重启？','警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }).then(async () => {
+        await axios.patch(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments/${command.row.name}/rollout`)
+        ElMessage.success({message: '操作成功'})
+      }).catch(() =>{})
+      break
+    }
+    case "setImage": {
+      let pods = await axios.get(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments/${command.row.name}/pods`)
+      let container = pods[0].spec.containers[0].name
+      await ElMessageBox.prompt(`请输入容器 ${container} 的镜像`,'提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+      }).then(async ({value}) => {
+        await axios.patch(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments/${command.row.name}?container=${container}&image=${value}`)
+        ElMessage.success({message: '操作成功'})
+      }).catch(() =>{})
+      break
+    }
+    case "scale": {
+      await ElMessageBox.prompt(`请输入副本数`,'提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /\d+/,
+        inputErrorMessage: '必须输入数字'
+      }).then(async ({value}) => {
+        await axios.patch(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments/scale`, {
+          workloads: [
+            {
+              name: command.row.name,
+              replicas: parseInt(value)
+            }  
+          ]
+        })
+        ElMessage.success({message: '操作成功'})
+      }).catch(() =>{})
+      break
+    }
+    case "yaml": {
+      yamlContent.value = await axios.get(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments/${command.row.name}/yaml`)
+      show.value.yaml = true
+      break
+    }
+    case "delete": {
+      await ElMessageBox.confirm('确定删除？','警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }).then(async () => {
+        await axios.delete(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/deployments/${command.row.name}`)
+        ElMessage.success({message: '删除成功'})
+      }).catch(() =>{})
+      break
+    }
+  }
+  setTimeout(async () => {
+    await getList(true)
+  }, 2000)
+}
+const getTemlates = async () => {
+  let response = await axios.get(`/db/application_template?page=1&size=100&sort=update_at desc`)
+  templateList.value = response.results.map(x => {
+    x.variables = JSON.parse(x.variables)
+    return x
+  })
+}
+const selectTemplate = (val) => {
+  if(val) {
+    formNew.value.content = val.content
+    formNew.value.variables = val.variables
+  }
+  else {
+    formNew.value.content = ""
+  }
+}
+const submitNew = async (f) => {
+  if(!f) return
+  await f.validate(async (valid) => {
+    if(valid) {
+      let params = Object.assign({}, formNew.value)
+      delete params.cluster
+      delete params.namespace
+      delete params.templates
+      let vars = {}
+      for(let x of params.variables) {
+        vars[x.key] = x.value
+      }
+      params.variables = vars
+      await axios.patch(`/kubernetes/cluster/${formNew.value.cluster}/namespace/${formNew.value.namespace}/apply/yaml`, params)
+      ElMessage.success({message: '发布成功'})
+      show.value.new = false
+    }
+    else {
+      ElMessage.warning('必填项未填完')
+    }
+  })
+}
+const submitYaml = async () => {
+  await axios.patch(`/kubernetes/cluster/${cluster.value}/namespace/${namespace.value}/apply/yaml`, {
+    content: yamlContent.value
+  })
+  show.value.yaml = false
+}
+const addVar = (index) => {
+  formNew.value.variables.splice(index+1, 0, {key:"", value:""})
+}
+const removeVar = (index) => {
+  formNew.value.variables.splice(index, 1)
+}
+</script>
