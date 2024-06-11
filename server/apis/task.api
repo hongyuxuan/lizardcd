@@ -1,0 +1,33 @@
+type (
+	RunTaskRepoReq {
+    Id          string `json:"id,optional"`
+		AppName     string `json:"app_name"`
+    TaskType    string `json:"task_type"`
+    TriggerType string `json:"trigger_type"`
+		Labels      map[string]string `json:"labels,optional"`
+    Workloads   []TaskWorkload `json:"workload"`
+	}
+
+  TaskWorkload {
+    Cluster        string `json:"cluster"`
+    Namespace      string `json:"namespace"`
+    WorkloadType   string `json:"workload_type"`
+    WorkloadName   string `json:"workload_name"`
+    ContainerName  string `json:"container_name,optional"`
+    ArtifactUrl    string `json:"artifact_url,optional"`
+  }
+)
+
+@server(
+	prefix: /lizardcd/task
+	group: task
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 执行任务
+	)
+	@handler runTask
+	post /run (RunTaskRepoReq) returns (Response)
+}

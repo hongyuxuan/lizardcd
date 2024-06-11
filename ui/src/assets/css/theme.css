@@ -1,0 +1,120 @@
+/************* theme-darkblue *************/
+.theme-darkblue .el-header,
+
+.theme-darkblue .el-aside {
+  background-color: #141f29;
+}
+
+.theme-darkblue .el-footer {
+  background-color: #141f29;
+  color: #60899c;
+}
+
+.theme-darkblue .el-aside#el-aside {
+  background-color: #141f29;
+  color: #333;
+}
+
+.theme-darkblue .el-header .sidebar-toggle:hover {
+  background-color: #f0f0f0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.theme-darkblue .el-aside .el-input {
+  --el-input-border-color: #141f29;
+  --el-input-hover-border-color: #141f29;
+}
+
+.theme-darkblue .el-aside .el-input__wrapper {
+  background-color: #273849;
+}
+
+.theme-darkblue .el-aside .el-input__wrapper.is-focus {
+  background-color: #fff;
+}
+
+.theme-darkblue .navbar-nav > li > a:hover,
+.theme-darkblue .navbar-nav > li > a:focus {
+  background-color: #f0f0f0 !important;
+}
+
+.theme-darkblue .el-aside .sidenav {
+  background-color: rgb(39, 56, 73);
+  color:#60899c;
+}
+
+.theme-darkblue .el-aside .sidebar-userinfo,
+.theme-darkblue .el-aside .sidebar-userinfo > a {
+  color: #fff;
+}
+
+.theme-darkblue .el-menu.el-menu--vertical {
+  border-right: solid 1px #545c64;
+}
+.theme-darkblue .el-aside .sidebar-form .btn,
+.theme-darkblue .el-aside .sidebar-form input[type=text] {
+  box-shadow: none;
+  background-color: #273849;
+  border: 1px solid transparent;
+  height: 35px;
+  transition: all .3s ease-in-out;
+}
+.theme-darkblue .el-aside .sidebar-form input[type=text]:focus {
+  background-color: #fff;
+  color: #000;
+}
+
+/************* theme-lightblue *************/
+.theme-lightblue .el-header {
+  background-color: #404040;
+  color: #fff;
+}
+
+.theme-lightblue .navbar-nav > li > a:hover,
+.theme-lightblue .navbar-nav > li > a:focus {
+  background-color: #333333 !important;
+  color: inherit;
+}
+
+.theme-lightblue .el-footer {
+  background-color: #fff;
+  color: #000;
+  border-top: #e2e2e2 1px solid;
+}
+
+.theme-lightblue .el-aside {
+  background-color: #f0f6f6;
+  color: #000;
+}
+
+.theme-lightblue .el-aside .sidenav {
+  background-color: #e0e0e0;
+  color: #575757;
+}
+
+.theme-lightblue .el-aside .sidebar-userinfo,
+.theme-lightblue .el-aside .sidebar-userinfo > a {
+  color: #000;
+}
+
+.theme-lightblue .el-aside .el-menu-item:hover {
+  background-color: #d5e2ef !important;
+}
+
+.theme-lightblue .el-aside .el-submenu__title:hover {
+background-color: #d5e2ef !important;
+}
+
+.theme-lightblue .el-menu--vertical .el-menu--popup .el-submenu__title:hover {
+  background-color: #d5e2ef !important;
+}
+
+.theme-lightblue .el-menu--vertical .el-menu--popup .el-menu-item:hover {
+  background-color: #d5e2ef !important;
+}
+
+.theme-lightblue .el-aside .el-menu-item.is-active {
+  background-color: #d5e2ef !important;
+  border-right: 3px solid #3f8bfe;
+}

@@ -1,0 +1,25 @@
+@server(
+	prefix: /lizardcd/istio
+	group: istio
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 获取destinationrule列表
+	)
+	@handler listDestinationRule
+	get /cluster/:cluster/namespace/:namespace/destinationrules (ListWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 获取virtualservice列表
+	)
+	@handler listVirtualService
+	get /cluster/:cluster/namespace/:namespace/virtualservices (ListWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 获取istioCRD yaml配置
+	)
+	@handler getIstioCrd
+	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml (ResourceReq) returns (string)
+}

@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package agent;
+
+option go_package = "./agent";
+
+/********* Kubernetes *********/
+message PatchWorkloadRequest {
+  string namespace = 1;
+  string workload_name = 2;
+  string container = 3;
+  string image = 4;
+}
+message ListResourceRequest {
+  string namespace = 1;
+  string label_selector = 2;
+}
+message GetWorkloadRequest {
+  string namespace = 1;
+  string workload_name = 2;
+}
+message GetEventRequest {
+  string namespace = 1;
+  string object_kind = 2;
+  string object_name = 3;
+}
+message YamlRequest {
+  string namespace = 1;
+  string ymlstring = 2;
+  string kind = 3;
+}
+message RolloutWorkloadRequest {
+  string namespace = 1;
+  string workload_name = 2;
+}
+message GetYamlRequest {
+  string namespace = 1;
+  string resource_type = 2;
+  string resource_name = 3;
+}
+message ScaleRequest {
+  string namespace = 1;
+  string workload_name = 2;
+  uint32 replicas = 3;
+}
+message LabelSelector {
+  string label_selector = 1;
+}
+message Response {
+  uint32 code = 1;
+  string message = 2;
+  bytes data = 3;
+}
+message YamlResponse {
+  uint32 code = 1;
+  string data = 2;
+}
+
+/********* Istio *********/
+message IstioCreateRequest {
+  string namespace = 1;
+  bytes resource_body = 2;
+} 
+message IstioPatchRequest {
+  string namespace = 1;
+  string name = 2;
+  bytes resource_body = 3;
+}
+message IstioGetRequest {
+  string namespace = 1;
+  string name = 2;
+}
+
+/********* Helm *********/
+message HelmEntriesRequest {
+  bytes entries = 1;
+}
+message HelmInstallChartRequest {
+  string namespace = 1;
+  string repo_url = 2;
+  string chart_name = 3;
+  string chart_version = 4;
+  string release_name = 5;
+  bytes  values = 6;
+  int32  revision = 7;
+  bool   wait = 8;
+  int64  timeout = 9;
+}
+message ListReleasesRequest {
+  string namespace = 1;
+  string release_name = 2;
+  int32 revision = 3;
+}
+
+service LizardAgent {
+  // kubernetes
+  rpc patchDeployment(PatchWorkloadRequest) returns(Response);
+  rpc patchStatefulset(PatchWorkloadRequest) returns(Response);
+  rpc listDeployment(ListResourceRequest) returns(Response);
+  rpc listStatefulset(ListResourceRequest) returns(Response);
+  rpc deleteDeployment(GetWorkloadRequest) returns(Response);
+  rpc deleteStatefulset(GetWorkloadRequest) returns(Response);
+  rpc getDeploymentPod(GetWorkloadRequest) returns(Response);
+  rpc getStatefulsetPod(GetWorkloadRequest) returns(Response);
+  rpc getEvent(GetEventRequest) returns(Response);
+  rpc getPodStatus(GetWorkloadRequest) returns(Response);
+  rpc deleteYaml(YamlRequest) returns(Response);
+  rpc applyYaml(YamlRequest) returns(Response);
+  rpc getyaml(GetYamlRequest) returns(YamlResponse);
+  rpc rolloutDeployment(RolloutWorkloadRequest) returns(Response);
+  rpc rolloutStatefulset(RolloutWorkloadRequest) returns(Response);
+  rpc scaleDeployment(ScaleRequest) returns(Response);
+  rpc scaleStatefulset(ScaleRequest) returns(Response);
+  rpc getNamespaces(LabelSelector) returns(Response);
+  rpc getDeployment(GetWorkloadRequest) returns(Response);
+  rpc getStatefulset(GetWorkloadRequest) returns(Response);
+  rpc getDeploymentQuota(GetWorkloadRequest) returns(Response);
+  rpc getStatefulsetQuota(GetWorkloadRequest) returns(Response);
+  // istio
+  rpc createDestinationRule(IstioCreateRequest) returns(Response);
+  rpc patchDestinationRule(IstioPatchRequest) returns(Response);
+  rpc listDestinationRule(ListResourceRequest) returns(Response);
+  rpc getDestinationRule(IstioGetRequest) returns(Response);
+  rpc deleteDestinationRule(IstioGetRequest) returns(Response);
+  rpc createVirtualService(IstioCreateRequest) returns(Response);
+  rpc patchVirtualService(IstioPatchRequest) returns(Response);
+  rpc listVirtualService(ListResourceRequest) returns(Response);
+  rpc getVirtualService(IstioGetRequest) returns(Response);
+  rpc deleteVirtualService(IstioGetRequest) returns(Response);
+  // helm
+  rpc helmUpdateRepo(HelmEntriesRequest) returns(Response);
+  rpc helmInstallChart(HelmInstallChartRequest) returns(Response);
+  rpc helmUninstallChart(HelmInstallChartRequest) returns(Response);
+  rpc helmUpgradeChart(HelmInstallChartRequest) returns(Response);
+  rpc helmListReleases(ListReleasesRequest) returns(Response);
+  rpc helmGetValues(ListReleasesRequest) returns(Response);
+  rpc helmReleaseHistory(ListReleasesRequest) returns(Response);
+  rpc helmRollback(HelmInstallChartRequest) returns(Response);
+}

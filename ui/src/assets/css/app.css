@@ -1,0 +1,330 @@
+div:not(.el-step__icon):not(.el-slider__button):not(.el-progress-bar__inner):not(.el-switch__action):not(.el-timeline *):not(.el-backtop),
+span.el-checkbox__inner,
+input,select, textarea,
+img:not(.img-circle),
+a.btn,
+table, td, th, p,
+button:not(.is-round):not(.is-circle),
+ul, li, label, pre, form,
+.border-radius-none {
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+  border-radius: 0 !important;
+}
+
+.el-main {
+  line-height: normal !important;
+}
+
+.el-menu {
+  --el-menu-border-color: inherit !important;
+  border-right: none !important;
+}
+
+.el-menu-item > a {
+  display: block;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+.el-input .el-icon {
+  height: inherit !important
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  position: relative;
+}
+.card-header .box-tools {
+  position: absolute;
+  right: 0px;
+  top: 5px;
+}
+.card-header-btn {
+  padding: 5px;
+}
+.card-header-btn:hover {
+  background-color: #e9e7e7;
+  cursor: pointer;
+}
+
+.card-body {
+  text-align: left;
+  font-size: 14px;
+}
+
+ul:not(.el-upload-list) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.el-breadcrumb {
+  background-color: #fff;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+}
+
+.card .card-icon {
+  text-align:center;
+  font-size:30px;
+  padding:15px 0 0 0
+}
+.card .card-text {
+  padding:8px 10px;
+  font-size:18px;
+  text-align:center;
+}
+.card:hover {
+  color: #00a65a
+}
+
+.svg-inline--fa {
+  margin-right: 6px;
+}
+
+.el-pagination {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.el-button + .el-button,
+.el-link + .el-button {
+  margin-left: 5px;
+}
+
+.el-button.is-circle .svg-inline--fa {
+  margin-right: 0 !important;
+}
+
+.el-drawer__header {
+  margin-bottom: 0;
+}
+
+.el-menu--horizontal>.el-menu-item {
+  border-bottom: 0;
+}
+
+.no-color {
+  color: inherit !important;
+}
+
+.twinkling {
+  -webkit-animation: twinkling 2s infinite ease-in-out;
+  animation: twinkling 2s infinite ease-in-out;
+}
+@-webkit-keyframes twinkling {    /*透明度由0到1*/
+  0%{
+     opacity:0.1; /*透明度为0*/
+   }
+  50%{
+     opacity:1; /*透明度为0*/
+   }
+  100%{
+     opacity:0.1; /*透明度为1*/
+  }
+}
+@keyframes twinkling {    /*透明度由0到1*/
+  0%{
+    opacity:0.1; /*透明度为0*/
+  }
+ 50%{
+    opacity:1; /*透明度为0*/
+  }
+ 100%{
+    opacity:0.1; /*透明度为1*/
+ }
+}
+
+.podstatus {
+  position: absolute;
+  font-size: 10px;
+  right: 8px;
+  bottom: 12px;
+}
+
+.runningstatus {
+  font-size: 10px;
+}
+
+.banner-bg-circle {
+  position: absolute;
+  top: 0;
+  right: -10px;
+  width: 150px;
+}
+
+.system-el-menu.el-menu--horizontal > .el-menu-item,
+.system-el-menu.el-menu--horizontal > .el-sub-menu .el-sub-menu__title {
+  height: 50px !important;
+  line-height: 50px !important;
+}
+
+.system-el-menu.el-menu--horizontal .el-sub-menu__title * {
+  vertical-align: inherit !important;
+}
+
+.el-form .el-switch {
+  margin-top: -5px;
+}
+
+.el-tag:not(.el-tooltip__trigger) + .el-tag,
+.el-tag:not(.el-tooltip__trigger) + .el-button,
+.el-tag:not(.el-tooltip__trigger) + .el-input {
+  margin-left: 5px;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.el-icon.copy {
+  margin-left: 5px;
+}
+
+.el-descriptions__label {
+  color: #8d8c8c !important;
+}
+
+.el-dialog__body {
+  padding-top: 15px !important;
+}
+
+.box.box-item {
+  border: none !important;
+}
+.box.box-item > .box-header {
+  background-color: #f4f4f4 !important;
+}
+
+.el-tabs__item .el-badge .el-badge__content.is-fixed {
+  right: 3px !important;
+  top: 8px !important;
+}
+
+.search-result {
+  margin-bottom: 15px;
+}
+
+.search-result__title {
+  font-size:18px;
+  line-height:25px;
+  padding: 8px 0 8px;
+}
+
+.search-result__content {
+  line-height: 25px;
+}
+
+.search-result__item {
+  padding-right: 20px;
+}
+
+.search-result em {
+  color: #3a84ff;
+}
+
+.el-calendar-table .el-calendar-day {
+  height: 100% !important;
+  min-height: var(--el-calendar-cell-width);
+}
+
+.el-table .cell {
+  font-size: 15px;
+}
+
+.el-table.line-height40 .el-table__cell {
+  line-height: 40px;
+}
+.el-table .el-table__cell .cell {
+  line-height: inherit !important;
+}
+
+.el-table .cell > .el-icon {
+  font-size: 16px;
+}
+
+.el-table .el-table__expand-icon {
+  height: inherit !important;
+}
+
+/* os-family */
+.os-family {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.el-header .el-menu--horizontal .el-sub-menu__title.el-tooltip__trigger.el-tooltip__trigger {
+  padding-right: calc(var(--el-menu-base-level-padding)) !important;
+}
+
+.el-alert + .el-alert {
+  --el-alert-padding: 0 16px 8px;
+}
+
+.contact .fa-user {
+  color: #FF9900;
+}
+
+.contact .fa-folder {
+  color: #3399CC;
+}
+
+.el-collapse-item__content {
+  font-size: 15px;
+}
+
+.el-collapse-item__content .el-switch,
+.el-collapse-item__content .el-input {
+  float: right
+}
+
+.el-card {
+  margin-bottom: 15px;
+}
+
+.statistic .el-col {
+  text-align: center;
+}
+
+.statistic .statistic__head {
+  color: #606266;
+  font-size: 14px;
+  line-height: 25px;
+  margin-bottom: 4px;
+}
+
+.statistic .statistic__content {
+  font-weight: bold;
+  font-size: 20px;
+  color: #303133;
+}
+
+.el-form-item .el-form-item {
+  margin-bottom: 18px !important;
+}
+
+.el-form-item .card-header {
+  font-size: 16px !important;
+}
+
+.el-form-item .el-card__header {
+  padding: 10px 15px !important;
+}
+
+.el-form-item .el-card__body {
+  padding-bottom: 10px !important;
+}
+
+.el-image .image-slot {
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+}
+
+.el-divider--horizontal {
+  margin: 10px 0;
+}

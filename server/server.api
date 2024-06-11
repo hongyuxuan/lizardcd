@@ -1,0 +1,77 @@
+info (
+	author: "hongyx2014@126.com"
+	date: "2024-03-11"
+	desc: "lizardcd云原生CD项目服务端API"
+	version: "v1.0.0"
+)
+
+import (
+	"apis/auth.api"
+	"apis/db.api"
+	"apis/helm.api"
+	"apis/istio.api"
+	"apis/kubernetes.api"
+	"apis/task.api"
+)
+
+type (
+	Response {
+		Code    int         `json:"code"`
+		Data    interface{} `json:"data,omitempty"`
+		Message string      `json:"message,omitempty"`
+	}
+)
+@server(
+	prefix: /lizardcd/server
+	group: lizardcd
+	jwt: Auth
+	middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 获取当前应用版本
+	)
+	@handler version
+	get /version returns (string)
+	
+	@doc(
+		summary: 获取注册的服务列表
+	)
+	@handler listservices
+	get /services returns (Response)
+	
+	@doc(
+		summary: 获取注册的服务详情
+	)
+	@handler getservice
+	get /services/:service_name (GetServiceReq) returns (Response)
+	
+	@doc(
+		summary: 根据注册的服务获取集群和ns
+	)
+	@handler listclusters
+	get /clusters returns (Response)
+	
+	@doc(
+		summary: 根据应用配置获取镜像仓库tags
+	)
+	@handler listimagetags
+	get /repo/image/tags (ListTagsReq) returns (Response)
+}
+
+type (
+	StaticReq {
+		Filename string `path:"filename"`
+	}
+)
+@server (
+	prefix: /lizardcd/server-static
+	group: static
+)
+service lizardServer {
+	@doc(
+		summary: 映射静态文件
+	)
+	@handler docfile
+	get /docs/:filename (StaticReq)
+}
