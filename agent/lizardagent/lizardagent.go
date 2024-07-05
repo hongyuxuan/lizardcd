@@ -13,26 +13,38 @@ import (
 )
 
 type (
-	GetPodEventRequest     = agent.GetPodEventRequest
-	GetWorkloadRequest     = agent.GetWorkloadRequest
-	GetYamlRequest         = agent.GetYamlRequest
-	LabelSelector          = agent.LabelSelector
-	ListWorkloadRequest    = agent.ListWorkloadRequest
-	PatchWorkloadRequest   = agent.PatchWorkloadRequest
-	Response               = agent.Response
-	RolloutWorkloadRequest = agent.RolloutWorkloadRequest
-	ScaleRequest           = agent.ScaleRequest
-	YamlRequest            = agent.YamlRequest
-	YamlResponse           = agent.YamlResponse
+	GetEventRequest         = agent.GetEventRequest
+	GetWorkloadRequest      = agent.GetWorkloadRequest
+	GetYamlRequest          = agent.GetYamlRequest
+	HelmEntriesRequest      = agent.HelmEntriesRequest
+	HelmInstallChartRequest = agent.HelmInstallChartRequest
+	IstioCreateRequest      = agent.IstioCreateRequest
+	IstioGetRequest         = agent.IstioGetRequest
+	IstioPatchRequest       = agent.IstioPatchRequest
+	LabelSelector           = agent.LabelSelector
+	ListReleasesRequest     = agent.ListReleasesRequest
+	ListResourceRequest     = agent.ListResourceRequest
+	PatchWorkloadRequest    = agent.PatchWorkloadRequest
+	Response                = agent.Response
+	RolloutWorkloadRequest  = agent.RolloutWorkloadRequest
+	ScaleRequest            = agent.ScaleRequest
+	VmDeployRequest         = agent.VmDeployRequest
+	VmHealthCheckRequest    = agent.VmHealthCheckRequest
+	YamlRequest             = agent.YamlRequest
+	YamlResponse            = agent.YamlResponse
 
 	LizardAgent interface {
+		// kubernetes
 		PatchDeployment(ctx context.Context, in *PatchWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
 		PatchStatefulset(ctx context.Context, in *PatchWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
-		ListDeployment(ctx context.Context, in *ListWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
-		ListStatefulset(ctx context.Context, in *ListWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
+		ListDeployment(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error)
+		ListStatefulset(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error)
+		DeleteDeployment(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
+		DeleteStatefulset(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
 		GetDeploymentPod(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
 		GetStatefulsetPod(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
-		GetPodEvent(ctx context.Context, in *GetPodEventRequest, opts ...grpc.CallOption) (*Response, error)
+		GetEvent(ctx context.Context, in *GetEventRequest, opts ...grpc.CallOption) (*Response, error)
+		GetPodStatus(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
 		DeleteYaml(ctx context.Context, in *YamlRequest, opts ...grpc.CallOption) (*Response, error)
 		ApplyYaml(ctx context.Context, in *YamlRequest, opts ...grpc.CallOption) (*Response, error)
 		Getyaml(ctx context.Context, in *GetYamlRequest, opts ...grpc.CallOption) (*YamlResponse, error)
@@ -41,6 +53,33 @@ type (
 		ScaleDeployment(ctx context.Context, in *ScaleRequest, opts ...grpc.CallOption) (*Response, error)
 		ScaleStatefulset(ctx context.Context, in *ScaleRequest, opts ...grpc.CallOption) (*Response, error)
 		GetNamespaces(ctx context.Context, in *LabelSelector, opts ...grpc.CallOption) (*Response, error)
+		GetDeployment(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
+		GetStatefulset(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
+		GetDeploymentQuota(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
+		GetStatefulsetQuota(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error)
+		// istio
+		CreateDestinationRule(ctx context.Context, in *IstioCreateRequest, opts ...grpc.CallOption) (*Response, error)
+		PatchDestinationRule(ctx context.Context, in *IstioPatchRequest, opts ...grpc.CallOption) (*Response, error)
+		ListDestinationRule(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error)
+		GetDestinationRule(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error)
+		DeleteDestinationRule(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error)
+		CreateVirtualService(ctx context.Context, in *IstioCreateRequest, opts ...grpc.CallOption) (*Response, error)
+		PatchVirtualService(ctx context.Context, in *IstioPatchRequest, opts ...grpc.CallOption) (*Response, error)
+		ListVirtualService(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error)
+		GetVirtualService(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error)
+		DeleteVirtualService(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error)
+		// helm
+		HelmUpdateRepo(ctx context.Context, in *HelmEntriesRequest, opts ...grpc.CallOption) (*Response, error)
+		HelmInstallChart(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error)
+		HelmUninstallChart(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error)
+		HelmUpgradeChart(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error)
+		HelmListReleases(ctx context.Context, in *ListReleasesRequest, opts ...grpc.CallOption) (*Response, error)
+		HelmGetValues(ctx context.Context, in *ListReleasesRequest, opts ...grpc.CallOption) (*Response, error)
+		HelmReleaseHistory(ctx context.Context, in *ListReleasesRequest, opts ...grpc.CallOption) (*Response, error)
+		HelmRollback(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error)
+		// vm deploy
+		VmDeploy(ctx context.Context, in *VmDeployRequest, opts ...grpc.CallOption) (*Response, error)
+		VmHealthCheck(ctx context.Context, in *VmHealthCheckRequest, opts ...grpc.CallOption) (*Response, error)
 	}
 
 	defaultLizardAgent struct {
@@ -54,6 +93,7 @@ func NewLizardAgent(cli zrpc.Client) LizardAgent {
 	}
 }
 
+// kubernetes
 func (m *defaultLizardAgent) PatchDeployment(ctx context.Context, in *PatchWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
 	client := agent.NewLizardAgentClient(m.cli.Conn())
 	return client.PatchDeployment(ctx, in, opts...)
@@ -64,14 +104,24 @@ func (m *defaultLizardAgent) PatchStatefulset(ctx context.Context, in *PatchWork
 	return client.PatchStatefulset(ctx, in, opts...)
 }
 
-func (m *defaultLizardAgent) ListDeployment(ctx context.Context, in *ListWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+func (m *defaultLizardAgent) ListDeployment(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error) {
 	client := agent.NewLizardAgentClient(m.cli.Conn())
 	return client.ListDeployment(ctx, in, opts...)
 }
 
-func (m *defaultLizardAgent) ListStatefulset(ctx context.Context, in *ListWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+func (m *defaultLizardAgent) ListStatefulset(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error) {
 	client := agent.NewLizardAgentClient(m.cli.Conn())
 	return client.ListStatefulset(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) DeleteDeployment(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.DeleteDeployment(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) DeleteStatefulset(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.DeleteStatefulset(ctx, in, opts...)
 }
 
 func (m *defaultLizardAgent) GetDeploymentPod(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
@@ -84,9 +134,14 @@ func (m *defaultLizardAgent) GetStatefulsetPod(ctx context.Context, in *GetWorkl
 	return client.GetStatefulsetPod(ctx, in, opts...)
 }
 
-func (m *defaultLizardAgent) GetPodEvent(ctx context.Context, in *GetPodEventRequest, opts ...grpc.CallOption) (*Response, error) {
+func (m *defaultLizardAgent) GetEvent(ctx context.Context, in *GetEventRequest, opts ...grpc.CallOption) (*Response, error) {
 	client := agent.NewLizardAgentClient(m.cli.Conn())
-	return client.GetPodEvent(ctx, in, opts...)
+	return client.GetEvent(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) GetPodStatus(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.GetPodStatus(ctx, in, opts...)
 }
 
 func (m *defaultLizardAgent) DeleteYaml(ctx context.Context, in *YamlRequest, opts ...grpc.CallOption) (*Response, error) {
@@ -127,4 +182,127 @@ func (m *defaultLizardAgent) ScaleStatefulset(ctx context.Context, in *ScaleRequ
 func (m *defaultLizardAgent) GetNamespaces(ctx context.Context, in *LabelSelector, opts ...grpc.CallOption) (*Response, error) {
 	client := agent.NewLizardAgentClient(m.cli.Conn())
 	return client.GetNamespaces(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) GetDeployment(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.GetDeployment(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) GetStatefulset(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.GetStatefulset(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) GetDeploymentQuota(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.GetDeploymentQuota(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) GetStatefulsetQuota(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.GetStatefulsetQuota(ctx, in, opts...)
+}
+
+// istio
+func (m *defaultLizardAgent) CreateDestinationRule(ctx context.Context, in *IstioCreateRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.CreateDestinationRule(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) PatchDestinationRule(ctx context.Context, in *IstioPatchRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.PatchDestinationRule(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) ListDestinationRule(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.ListDestinationRule(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) GetDestinationRule(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.GetDestinationRule(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) DeleteDestinationRule(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.DeleteDestinationRule(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) CreateVirtualService(ctx context.Context, in *IstioCreateRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.CreateVirtualService(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) PatchVirtualService(ctx context.Context, in *IstioPatchRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.PatchVirtualService(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) ListVirtualService(ctx context.Context, in *ListResourceRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.ListVirtualService(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) GetVirtualService(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.GetVirtualService(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) DeleteVirtualService(ctx context.Context, in *IstioGetRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.DeleteVirtualService(ctx, in, opts...)
+}
+
+// helm
+func (m *defaultLizardAgent) HelmUpdateRepo(ctx context.Context, in *HelmEntriesRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmUpdateRepo(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) HelmInstallChart(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmInstallChart(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) HelmUninstallChart(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmUninstallChart(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) HelmUpgradeChart(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmUpgradeChart(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) HelmListReleases(ctx context.Context, in *ListReleasesRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmListReleases(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) HelmGetValues(ctx context.Context, in *ListReleasesRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmGetValues(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) HelmReleaseHistory(ctx context.Context, in *ListReleasesRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmReleaseHistory(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) HelmRollback(ctx context.Context, in *HelmInstallChartRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.HelmRollback(ctx, in, opts...)
+}
+
+// vm deploy
+func (m *defaultLizardAgent) VmDeploy(ctx context.Context, in *VmDeployRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.VmDeploy(ctx, in, opts...)
+}
+
+func (m *defaultLizardAgent) VmHealthCheck(ctx context.Context, in *VmHealthCheckRequest, opts ...grpc.CallOption) (*Response, error) {
+	client := agent.NewLizardAgentClient(m.cli.Conn())
+	return client.VmHealthCheck(ctx, in, opts...)
 }

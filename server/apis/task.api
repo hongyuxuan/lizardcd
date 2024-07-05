@@ -1,0 +1,42 @@
+type (
+	RunTaskReq {
+    Id          string         `json:"id,optional"`
+		AppName     string         `json:"app_name"`
+    TaskType    string         `json:"task_type"`
+    TriggerType string         `json:"trigger_type"`
+		Labels      []string       `json:"labels,optional"`
+    Workloads   []TaskWorkload `json:"workloads,optional"`
+    ArtifactUrl string         `json:"artifact_url,optional"` // HTTP部署用
+	}
+  TaskWorkload {
+    Cluster        string `json:"cluster,optional"`
+    Namespace      string `json:"namespace,optional"`
+    WorkloadType   string `json:"workload_type"`
+    WorkloadName   string `json:"workload_name"`
+    ContainerName  string `json:"container_name,optional"`
+    ArtifactUrl    string `json:"artifact_url,optional"`
+  }
+  TaskIdReq {
+    Id string `path:"id"`
+  }
+)
+
+@server(
+	prefix: /lizardcd/task
+	group: task
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 执行任务
+	)
+	@handler runTask
+	post /run (RunTaskReq) returns (Response)
+
+  @doc(
+		summary: 删除任务历史
+	)
+	@handler deleteHistory
+	delete /history/:id (TaskIdReq) returns (Response)
+}

@@ -1,0 +1,152 @@
+type (
+	AddRepoReq {
+		Name     string `json:"name"`
+		Url      string `json:"url"`
+		Username string `json:"username,optional"`
+		Password string `json:"password,optional"`
+	}
+
+  RepoReq {
+    RepoName string `path:"repo_name"`
+    ChartName string `form:"chart_name,optional"`
+  }
+
+  ChartReq {
+    Name string `path:"name"`
+    ChartName string `path:"chart_name"`
+  }
+
+  InstallChartReq {
+    Cluster string `path:"cluster"`
+    Namespace string `path:"namespace"`
+    RepoUrl string `json:"repo_url"`
+    ChartName string `json:"chart_name"`
+    ChartVersion string `json:"chart_version"`
+    ReleaseName string `json:"release_name"`
+    Values string `json:"values,optional"`
+    Revision int32 `json:"revision,optional"`
+  }
+
+  ListReleasesReq {
+		Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+		ReleaseName string `form:"release_name,optional"`
+    Revision int32 `form:"revision,optional"`
+	}
+
+  ShowValuesReq {
+    RepoUrl string `form:"repo_url"`
+    ChartName string `form:"chart_name"`
+    ChartVersion string `form:"chart_version"`
+  }
+
+  RollbackReq {
+    Cluster string `path:"cluster"`
+    Namespace string `path:"namespace"`
+    ReleaseName string `json:"release_name"`
+    Revision int32 `json:"revision"`
+  }
+)
+@server(
+	prefix: /lizardcd/helm
+	group: helm
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 获取Helm仓库列表
+	)
+	@handler listRepo
+	get /repos returns (Response)
+	
+	@doc(
+		summary: 添加Helm仓库
+	)
+	@handler addRepo
+	post /repo (AddRepoReq) returns (Response)
+
+  @doc(
+		summary: 更新Helm仓库charts
+	)
+	@handler updateCharts
+	post /cluster/:cluster/namespace/:namespace/repo/update (ListWorkloadReq) returns (Response)
+
+  @doc(
+		summary: 删除Helm仓库
+	)
+	@handler deleteRepo
+	delete /repo/:repo_name (RepoReq) returns (Response)
+
+  @doc(
+		summary: 搜索Helm仓库里的charts
+	)
+	@handler searchChart
+	get /repo/:repo_name (RepoReq) returns (Response)
+
+  @doc(
+		summary: 列出Helm仓库里指定chart所有版本
+	)
+	@handler searchChartVersion
+	get /repo/:name/:chart_name (ChartReq) returns (Response)
+
+  @doc(
+		summary: 安装chart
+	)
+	@handler installChart
+	post /cluster/:cluster/namespace/:namespace/charts/install (InstallChartReq) returns (Response)
+
+  @doc(
+		summary: 卸载chart
+	)
+	@handler uninstallChart
+	post /cluster/:cluster/namespace/:namespace/charts/uninstall (ListReleasesReq) returns (Response)
+
+  @doc(
+		summary: 重装chart
+	)
+	@handler upgradeChart
+	post /cluster/:cluster/namespace/:namespace/charts/upgrade (InstallChartReq) returns (Response)
+
+  @doc(
+		summary: 列出已安装的release
+	)
+	@handler listRelease
+	get /cluster/:cluster/namespace/:namespace/releases (ListReleasesReq) returns (Response)
+
+  @doc(
+		summary: 获取charts中的默认values.yaml
+	)
+	@handler showValues
+	get /repo/charts/values (ShowValuesReq) returns (Response)
+
+  @doc(
+		summary: 获取charts中README.md
+	)
+	@handler showReadme
+	get /repo/charts/readme (ShowValuesReq) returns (Response)
+
+  @doc(
+		summary: 下载chart
+	)
+	@handler download
+	get /repo/charts/download (ShowValuesReq) returns (Response)
+
+  @doc(
+		summary: 获取release中的values.yaml
+	)
+	@handler getValues
+	get /cluster/:cluster/namespace/:namespace/release/values (ListReleasesReq) returns (Response)
+
+  @doc(
+		summary: 获取release的历史版本
+	)
+	@handler releaseHistory
+	get /cluster/:cluster/namespace/:namespace/release/history (ListReleasesReq) returns (Response)
+
+  @doc(
+		summary: 回滚release到指定版本
+	)
+	@handler rollback
+	post /cluster/:cluster/namespace/:namespace/release/rollback (RollbackReq) returns (Response)
+}

@@ -43,7 +43,7 @@ const submit = async (f) => {
   if(!f) return
   await f.validate(async (valid) => {
     if(valid) {
-      let response = await axios.post(`/auth/login`, form.value)
+      let response = await axios.post(`/lizardcd/auth/login`, form.value)
       localStorage.access_token = response.access_token
       window.location.href = "/"
     } else {

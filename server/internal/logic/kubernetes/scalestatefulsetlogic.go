@@ -6,6 +6,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -32,10 +33,10 @@ func (l *ScaleStatefulsetLogic) ScaleStatefulset(req *types.ScaleReq) (resp *typ
 		return
 	}
 	for _, workload := range req.Workloads {
-		if workload.Disabled == true {
+		if workload.Disabled {
 			continue
 		}
-		if _, err = ag.ScaleStatefulset(context.WithValue(l.ctx, "SpanName", "rpc.ScaleStatefulset"), &agent.ScaleRequest{
+		if _, err = ag.ScaleStatefulset(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.ScaleStatefulset"), &agent.ScaleRequest{
 			Namespace:    req.Namespace,
 			WorkloadName: workload.Name,
 			Replicas:     uint32(workload.Replicas),

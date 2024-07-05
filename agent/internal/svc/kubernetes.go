@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hongyuxuan/lizardcd/agent/types"
 	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"gopkg.in/yaml.v2"
@@ -41,7 +41,7 @@ func GetK8sService(ctx context.Context, svcCtx *ServiceContext) *K8sService {
 }
 
 func (k8s *K8sService) PatchDeployment(namespace, workloadName, containerName, imageName string) (res *v1.Deployment, err error) {
-	if res, err = k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(context.TODO(), workloadName, metav1.GetOptions{}); err != nil {
+	if res, err = k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{}); err != nil {
 		return
 	}
 	var data string
@@ -58,13 +58,13 @@ func (k8s *K8sService) PatchDeployment(namespace, workloadName, containerName, i
 		}
 	}
 	if data == "" {
-		return nil, errorx.NewDefaultError(fmt.Sprintf("Deployment[%s] cannot find container[name=%s]", workloadName, containerName))
+		return nil, errorx.NewDefaultError("Deployment[%s] cannot find container[name=%s]", workloadName, containerName)
 	}
-	return k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
+	return k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Patch(k8s.ctx, workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
 }
 
 func (k8s *K8sService) PatchStatefulset(namespace, workloadName, containerName, imageName string) (res *v1.StatefulSet, err error) {
-	if res, err = k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Get(context.TODO(), workloadName, metav1.GetOptions{}); err != nil {
+	if res, err = k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{}); err != nil {
 		return
 	}
 	var data string
@@ -81,14 +81,14 @@ func (k8s *K8sService) PatchStatefulset(namespace, workloadName, containerName, 
 		}
 	}
 	if data == "" {
-		return nil, errorx.NewDefaultError(fmt.Sprintf("Deployment[%s] cannot find container[name=%s]", workloadName, containerName))
+		return nil, errorx.NewDefaultError("Deployment[%s] cannot find container[name=%s]", workloadName, containerName)
 	}
-	return k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Patch(context.TODO(), workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
+	return k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Patch(k8s.ctx, workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
 }
 
 func (k8s *K8sService) ScaleDeployment(namespace string, workloadName string, replicas uint32) error {
 	data := fmt.Sprintf(`{ "spec": { "replicas": %d } }`, replicas)
-	_, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
+	_, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Patch(k8s.ctx, workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
 	if err != nil {
 		return errorx.NewDefaultError(err.Error())
 	}
@@ -96,9 +96,17 @@ func (k8s *K8sService) ScaleDeployment(namespace string, workloadName string, re
 	return nil
 }
 
+func (k8s *K8sService) DeleteDeployment(namespace, workloadName string) (err error) {
+	return k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Delete(k8s.ctx, workloadName, metav1.DeleteOptions{})
+}
+
+func (k8s *K8sService) DeleteStatefulset(namespace, workloadName string) (err error) {
+	return k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Delete(k8s.ctx, workloadName, metav1.DeleteOptions{})
+}
+
 func (k8s *K8sService) GetDeploymentReplicas(namespace string, workloads []string) (workloadReplicas []map[string]interface{}, err error) {
 	for _, workload := range workloads {
-		res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(context.TODO(), workload, metav1.GetOptions{})
+		res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(k8s.ctx, workload, metav1.GetOptions{})
 		if err != nil {
 			return nil, errorx.NewDefaultError(err.Error())
 		}
@@ -112,14 +120,14 @@ func (k8s *K8sService) GetDeploymentReplicas(namespace string, workloads []strin
 
 func (k8s *K8sService) GetDeploymentImagess(namespace string, initContainer bool, workloads []string) (workloadImages []map[string]interface{}, err error) {
 	for _, workload := range workloads {
-		res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(context.TODO(), workload, metav1.GetOptions{})
+		res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(k8s.ctx, workload, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			continue
 		} else if err != nil {
 			return nil, errorx.NewDefaultError(err.Error())
 		}
 		var image string
-		if initContainer == true {
+		if initContainer {
 			image = res.Spec.Template.Spec.InitContainers[0].Image
 		} else {
 			image = res.Spec.Template.Spec.Containers[0].Image
@@ -134,7 +142,7 @@ func (k8s *K8sService) GetDeploymentImagess(namespace string, initContainer bool
 
 func (k8s *K8sService) ScaleStatefulset(namespace string, workloadName string, replicas uint32) error {
 	data := fmt.Sprintf(`{ "spec": { "replicas": %d } }`, replicas)
-	_, err := k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Patch(context.TODO(), workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
+	_, err := k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Patch(k8s.ctx, workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
 	if err != nil {
 		return errorx.NewDefaultError(err.Error())
 	}
@@ -143,7 +151,7 @@ func (k8s *K8sService) ScaleStatefulset(namespace string, workloadName string, r
 }
 
 func (k8s *K8sService) GetDeploymentPodInfo(namespace, workloadName string) ([]corev1.Pod, error) {
-	res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(context.TODO(), workloadName, metav1.GetOptions{})
+	res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{})
 	if err != nil {
 		return nil, errorx.NewDefaultError(err.Error())
 	}
@@ -152,7 +160,7 @@ func (k8s *K8sService) GetDeploymentPodInfo(namespace, workloadName string) ([]c
 }
 
 func (k8s *K8sService) GetStatefulsetPodInfo(namespace, workloadName string) ([]corev1.Pod, error) {
-	res, err := k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Get(context.TODO(), workloadName, metav1.GetOptions{})
+	res, err := k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{})
 	if err != nil {
 		return nil, errorx.NewDefaultError(err.Error())
 	}
@@ -160,8 +168,8 @@ func (k8s *K8sService) GetStatefulsetPodInfo(namespace, workloadName string) ([]
 	return k8s.GetPodStatus(namespace, labels)
 }
 
-func (k8s *K8sService) GetDeploymentPodStatus(namespace, workloadName string) (*types.WorkloadStatus, error) {
-	res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(context.TODO(), workloadName, metav1.GetOptions{})
+func (k8s *K8sService) GetDeploymentPodStatus(namespace, workloadName string) (*commontypes.WorkloadStatus, error) {
+	res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{})
 	if err != nil {
 		return nil, errorx.NewDefaultError(err.Error())
 	}
@@ -170,7 +178,7 @@ func (k8s *K8sService) GetDeploymentPodStatus(namespace, workloadName string) (*
 	if err != nil {
 		return nil, errorx.NewDefaultError(err.Error())
 	}
-	var pods []types.PodStatus
+	var pods []commontypes.PodStatus
 	for _, v := range Pods {
 		var readyStatus string
 		for _, c := range v.Status.Conditions {
@@ -179,13 +187,13 @@ func (k8s *K8sService) GetDeploymentPodStatus(namespace, workloadName string) (*
 				break
 			}
 		}
-		podstatus := types.PodStatus{
+		podstatus := commontypes.PodStatus{
 			PodName: v.Name,
 			Ready:   readyStatus,
 		}
 		pods = append(pods, podstatus)
 	}
-	workLoadStatus := types.WorkloadStatus{
+	workLoadStatus := commontypes.WorkloadStatus{
 		Name: workloadName,
 		Pods: pods,
 	}
@@ -193,15 +201,12 @@ func (k8s *K8sService) GetDeploymentPodStatus(namespace, workloadName string) (*
 }
 
 func (k8s *K8sService) GetPodStatus(namespace string, labels map[string]string) ([]corev1.Pod, error) {
+	delete(labels, "pod-template-hash")
 	var labelSelector []string
 	for k, v := range labels {
-		if k == "pod-template-hash" {
-			continue
-		}
 		labelSelector = append(labelSelector, k+"="+v)
 	}
-	k8s.Logger.Debugf("Get pods with namespace: %s, labelSelector: %s", namespace, strings.Join(labelSelector, ","))
-	res, err := k8s.svcCtx.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+	res, err := k8s.svcCtx.Clientset.CoreV1().Pods(namespace).List(k8s.ctx, metav1.ListOptions{
 		LabelSelector: strings.Join(labelSelector, ","),
 	})
 	if err != nil {
@@ -210,12 +215,13 @@ func (k8s *K8sService) GetPodStatus(namespace string, labels map[string]string) 
 	for i := range res.Items {
 		res.Items[i].ManagedFields = nil
 	}
+	// k8s.Logger.Debugf("Get pods with namespace: %s, labelSelector: %s, items=%+v", namespace, strings.Join(labelSelector, ","), res.Items)
 	return res.Items, nil
 }
 
-func (k8s *K8sService) GetEvents(namespace, podName string) ([]corev1.Event, error) {
-	res, err := k8s.svcCtx.Clientset.CoreV1().Events(namespace).List(context.TODO(), metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("involvedObject.name=%s", podName),
+func (k8s *K8sService) GetEvents(namespace, objectKind, objectName string) ([]corev1.Event, error) {
+	res, err := k8s.svcCtx.Clientset.CoreV1().Events(namespace).List(k8s.ctx, metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("involvedObject.name=%s,involvedObject.kind=%s", objectName, objectKind),
 	})
 	if err != nil {
 		return nil, errorx.NewDefaultError(err.Error())
@@ -224,9 +230,14 @@ func (k8s *K8sService) GetEvents(namespace, podName string) ([]corev1.Event, err
 }
 
 func (k8s *K8sService) GetCoreV1ResourceYAML(namespace, resourceType, resourceNames string) (string, error) {
-	secret, err := k8s.GetDefaultSecret(namespace)
+	secret, err := k8s.GetSecret(namespace)
 	if err != nil {
 		return "", err
+	}
+	if secret == nil {
+		errMsg := fmt.Sprintf("Cannot find secret with prefix \"%s\" in namespace \"%s\"", k8s.svcCtx.Config.KubernetesSecretPrefix, namespace)
+		k8s.Logger.Error(errMsg)
+		return "", errorx.NewDefaultError(errMsg)
 	}
 	token := string(secret.Data["token"])
 	k8s.Logger.Debugf("Get default token=%s", token)
@@ -255,10 +266,15 @@ func (k8s *K8sService) GetCoreV1ResourceYAML(namespace, resourceType, resourceNa
 }
 
 func (k8s *K8sService) GetAppsV1ResourceYAML(namespace, resourceType, resourceNames string) (string, error) {
-	secret, err := k8s.GetDefaultSecret(namespace)
+	secret, err := k8s.GetSecret(namespace)
 	if err != nil {
 		k8s.Logger.Error(err)
 		return "", errorx.NewDefaultError(err.Error())
+	}
+	if secret == nil {
+		errMsg := fmt.Sprintf("Cannot find secret with prefix \"%s\" in namespace \"%s\"", k8s.svcCtx.Config.KubernetesSecretPrefix, namespace)
+		k8s.Logger.Error(errMsg)
+		return "", errorx.NewDefaultError(errMsg)
 	}
 	token := string(secret.Data["token"])
 	k8s.Logger.Debugf("Get default token=%s", token)
@@ -285,9 +301,14 @@ func (k8s *K8sService) GetAppsV1ResourceYAML(namespace, resourceType, resourceNa
 }
 
 func (k8s *K8sService) GetIngressYAML(namespace, resourceNames string) (string, error) {
-	secret, err := k8s.GetDefaultSecret(namespace)
+	secret, err := k8s.GetSecret(namespace)
 	if err != nil {
 		return "", err
+	}
+	if secret == nil {
+		errMsg := fmt.Sprintf("Cannot find secret with prefix \"%s\" in namespace \"%s\"", k8s.svcCtx.Config.KubernetesSecretPrefix, namespace)
+		k8s.Logger.Error(errMsg)
+		return "", errorx.NewDefaultError(errMsg)
 	}
 	token := string(secret.Data["token"])
 	k8s.Logger.Debugf("Get default token=%s", token)
@@ -314,7 +335,7 @@ func (k8s *K8sService) GetIngressYAML(namespace, resourceNames string) (string, 
 }
 
 func (k8s *K8sService) GetConfigMap(namespace string, configmapName string) (map[string]string, error) {
-	res, err := k8s.svcCtx.Clientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), configmapName, metav1.GetOptions{})
+	res, err := k8s.svcCtx.Clientset.CoreV1().ConfigMaps(namespace).Get(k8s.ctx, configmapName, metav1.GetOptions{})
 	if err != nil {
 		k8s.Logger.Error(err)
 		return nil, errorx.NewDefaultError(err.Error())
@@ -324,7 +345,7 @@ func (k8s *K8sService) GetConfigMap(namespace string, configmapName string) (map
 
 func (k8s *K8sService) PatchConfigMap(namespace, configmapName, key string, value string) (*corev1.ConfigMap, error) {
 	data := fmt.Sprintf(`{ "data": { "%s": "%s" } }`, key, value)
-	res, err := k8s.svcCtx.Clientset.CoreV1().ConfigMaps(namespace).Patch(context.TODO(), configmapName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
+	res, err := k8s.svcCtx.Clientset.CoreV1().ConfigMaps(namespace).Patch(k8s.ctx, configmapName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
 	if err != nil {
 		k8s.Logger.Error(err)
 		return nil, errorx.NewDefaultError(err.Error())
@@ -332,30 +353,21 @@ func (k8s *K8sService) PatchConfigMap(namespace, configmapName, key string, valu
 	return res, nil
 }
 
-func (k8s *K8sService) GetSecrets(namespace string) ([]corev1.Secret, error) {
-	res, err := k8s.svcCtx.Clientset.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{})
+func (k8s *K8sService) GetSecret(namespace string) (*corev1.Secret, error) {
+	res, err := k8s.svcCtx.Clientset.CoreV1().Secrets(namespace).List(k8s.ctx, metav1.ListOptions{})
 	if err != nil {
 		k8s.Logger.Error(err)
 		return nil, errorx.NewDefaultError(err.Error())
 	}
-	return res.Items, nil
-}
-
-func (k8s *K8sService) GetDefaultSecret(namespace string) (*corev1.Secret, error) {
-	res, err := k8s.GetSecrets(namespace)
-	if err != nil {
-		k8s.Logger.Error(err)
-		return nil, errorx.NewDefaultError(err.Error())
-	}
-	for _, secret := range res {
-		if strings.HasPrefix(secret.Name, "default-token") {
+	for _, secret := range res.Items {
+		if strings.HasPrefix(secret.Name, k8s.svcCtx.Config.KubernetesSecretPrefix) {
 			return &secret, nil
 		}
 	}
 	return nil, nil
 }
 
-func (k8s *K8sService) UpdateFromYaml(namespace string, applyYaml string, taskResult chan map[string]interface{}) {
+func (k8s *K8sService) UpdateFromYaml(namespace, applyYaml, kind string, taskResult chan map[string]interface{}) {
 	d := uyaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(applyYaml), 4096)
 	for {
 		unstructureObj, err := k8s.getUnstructured(d)
@@ -363,7 +375,15 @@ func (k8s *K8sService) UpdateFromYaml(namespace string, applyYaml string, taskRe
 			break
 		}
 		if err != nil {
-			taskResult <- map[string]interface{}{"success": false, "message": fmt.Sprintf(err.Error())}
+			taskResult <- map[string]interface{}{"success": false, "message": err.Error()}
+			return
+		}
+		if namespace != unstructureObj.GetNamespace() {
+			taskResult <- map[string]interface{}{"success": false, "message": fmt.Sprintf("Namespace must be %s", namespace)}
+			return
+		}
+		if kind != "" && kind != unstructureObj.GetKind() {
+			taskResult <- map[string]interface{}{"success": false, "message": fmt.Sprintf("Kind must be %s", kind)}
 			return
 		}
 		gvr, err := k8s.gtGVR(unstructureObj.GroupVersionKind())
@@ -382,7 +402,6 @@ func (k8s *K8sService) UpdateFromYaml(namespace string, applyYaml string, taskRe
 			taskResult <- map[string]interface{}{"success": true, "message": "success"}
 			return
 		}
-
 		if namespace == unstructureObj.GetNamespace() {
 			_, err = k8s.svcCtx.Dynamicclient.Resource(gvr).Namespace(namespace).Update(context.Background(), unstructureObj, metav1.UpdateOptions{})
 			if err != nil {
@@ -414,7 +433,7 @@ func (k8s *K8sService) DeleteFromYaml(namespace string, applyYaml string, taskRe
 			break
 		}
 		if err != nil {
-			taskResult <- map[string]interface{}{"success": false, "message": fmt.Sprintf(err.Error())}
+			taskResult <- map[string]interface{}{"success": false, "message": err.Error()}
 			return
 		}
 		gvr, err := k8s.gtGVR(unstructureObj.GroupVersionKind())
@@ -438,11 +457,11 @@ func (k8s *K8sService) DeleteFromYaml(namespace string, applyYaml string, taskRe
 	}
 }
 
-// curl -v -XPATCH  -H "Content-Type: application/strategic-merge-patch+json" -H "User-Agent: kubectl/v1.23.5 (linux/amd64) kubernetes/c285e78" -H "Accept: application/json, */*" 'https://10.21.131.253:6443/apis/apps/v1/namespaces/ficc-ofa-dev/deployments/tools?fieldManager=kubectl-rollout'
+// curl -v -XPATCH  -H "Content-Type: application/strategic-merge-patch+json" -H "User-Agent: kubectl/v1.23.5 (linux/amd64) kubernetes/c285e78" -H "Accept: application/json, */*" 'https://10.21.131.253:6443/apis/apps/v1/namespaces/default/deployments/tools?fieldManager=kubectl-rollout'
 // request body: {"spec":{"template":{"metadata":{"annotations":{"kubectl.kubernetes.io/restartedAt":"2023-04-17T08:32:32Z"}}}}}
 func (k8s *K8sService) RolloutDeployment(namespace, workloadName string) (res *v1.Deployment, err error) {
 	data := fmt.Sprintf(`{"spec":{"template":{"metadata":{"annotations":{"kubectl.kubernetes.io/restartedAt":"%s"}}}}}`, time.Now().Format("2006-01-02T15:04:05Z"))
-	res, err = k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{FieldManager: "kubectl-rollout"})
+	res, err = k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Patch(k8s.ctx, workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{FieldManager: "kubectl-rollout"})
 	if err != nil {
 		k8s.Logger.Error(err)
 	}
@@ -451,7 +470,7 @@ func (k8s *K8sService) RolloutDeployment(namespace, workloadName string) (res *v
 
 func (k8s *K8sService) RolloutStatefulset(namespace, workloadName string) (res *v1.StatefulSet, err error) {
 	data := fmt.Sprintf(`{"spec":{"template":{"metadata":{"annotations":{"kubectl.kubernetes.io/restartedAt":"%s"}}}}}`, time.Now().Format("2006-01-02T15:04:05Z"))
-	res, err = k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Patch(context.TODO(), workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{FieldManager: "kubectl-rollout"})
+	res, err = k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Patch(k8s.ctx, workloadName, ktypes.StrategicMergePatchType, []byte(data), metav1.PatchOptions{FieldManager: "kubectl-rollout"})
 	if err != nil {
 		k8s.Logger.Error(err)
 	}
@@ -481,17 +500,17 @@ func (k8s *K8sService) getUnstructured(d *uyaml.YAMLOrJSONDecoder) (unstructureO
 		return
 	}
 	if err != nil {
-		err = errorx.NewDefaultError(fmt.Sprintf("Decode is err: %v", err.Error()))
+		err = errorx.NewDefaultError("Decode is err: %v", err.Error())
 		return
 	}
 	obj, _, err := syaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
 	if err != nil {
-		err = errorx.NewDefaultError(fmt.Sprintf("Rawobj is err: %v", err.Error()))
+		err = errorx.NewDefaultError("Rawobj is err: %v", err.Error())
 		return
 	}
 	unstructuredMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 	if err != nil {
-		err = errorx.NewDefaultError(fmt.Sprintf("Tounstructured is err %v", err.Error()))
+		err = errorx.NewDefaultError("Tounstructured is err %v", err.Error())
 		return
 	}
 	unstructureObj = &unstructured.Unstructured{Object: unstructuredMap}
@@ -511,7 +530,7 @@ func (k8s *K8sService) ListDeployment(namespace, labelSelector string) (res []v1
 	var conti string
 	for {
 		var listRes *v1.DeploymentList
-		if listRes, err = k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{
+		if listRes, err = k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).List(k8s.ctx, metav1.ListOptions{
 			LabelSelector: labelSelector,
 			Continue:      conti,
 			Limit:         10,
@@ -532,7 +551,7 @@ func (k8s *K8sService) ListStatefulset(namespace, labelSelector string) (res []v
 	var conti string
 	for {
 		var listRes *v1.StatefulSetList
-		if listRes, err = k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).List(context.TODO(), metav1.ListOptions{
+		if listRes, err = k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).List(k8s.ctx, metav1.ListOptions{
 			LabelSelector: labelSelector,
 			Continue:      conti,
 			Limit:         10,
@@ -547,6 +566,40 @@ func (k8s *K8sService) ListStatefulset(namespace, labelSelector string) (res []v
 		conti = listRes.Continue
 	}
 	return
+}
+
+func (k8s *K8sService) GetDeployment(namespace, workloadName string) (*v1.Deployment, error) {
+	res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	res.ManagedFields = nil
+	return res, nil
+}
+
+func (k8s *K8sService) GetStatefulset(namespace, workloadName string) (*v1.StatefulSet, error) {
+	res, err := k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	res.ManagedFields = nil
+	return res, nil
+}
+
+func (k8s *K8sService) GetDeploymentResourceQuota(namespace, workloadName string) (*corev1.ResourceRequirements, error) {
+	res, err := k8s.svcCtx.Clientset.AppsV1().Deployments(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return &res.Spec.Template.Spec.Containers[0].Resources, nil
+}
+
+func (k8s *K8sService) GetStatefulsetResourceQuota(namespace, workloadName string) (*corev1.ResourceRequirements, error) {
+	res, err := k8s.svcCtx.Clientset.AppsV1().StatefulSets(namespace).Get(k8s.ctx, workloadName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return &res.Spec.Template.Spec.Containers[0].Resources, nil
 }
 
 func processDeploymentItems(listRes *v1.DeploymentList) []v1.Deployment {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -32,10 +33,10 @@ func (l *ScaleDeploymentLogic) ScaleDeployment(req *types.ScaleReq) (resp *types
 		return
 	}
 	for _, workload := range req.Workloads {
-		if workload.Disabled == true {
+		if workload.Disabled {
 			continue
 		}
-		if _, err = ag.ScaleDeployment(context.WithValue(l.ctx, "SpanName", "rpc.ScaleDeployment"), &agent.ScaleRequest{
+		if _, err = ag.ScaleDeployment(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.ScaleDeployment"), &agent.ScaleRequest{
 			Namespace:    req.Namespace,
 			WorkloadName: workload.Name,
 			Replicas:     uint32(workload.Replicas),

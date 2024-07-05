@@ -2,20 +2,17 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/hongyuxuan/lizardcd/common/errorx"
 
 	capi "github.com/hashicorp/consul/api"
 	"github.com/zeromicro/go-zero/core/logx"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type ConsulUtil struct {
 	logx.Logger
 	consulClient *capi.Client
-	tracer       trace.Tracer
 }
 
 func NewConsulUtil(ctx context.Context, consulClient *capi.Client) *ConsulUtil {
@@ -43,7 +40,7 @@ func (c *ConsulUtil) GetKV(ctx context.Context, key string) ([]byte, error) {
 		return nil, err
 	}
 	if pair == nil {
-		e := errorx.NewDefaultError(fmt.Sprintf("Consul cannot find key: %s", key))
+		e := errorx.NewDefaultError("Consul cannot find key: %s", key)
 		return nil, e
 	}
 	c.Logger.Debugf("Consul key[%s]=%s", pair.Key, string(pair.Value))

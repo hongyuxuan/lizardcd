@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"github.com/hongyuxuan/lizardcd/common/constant"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"go.opentelemetry.io/otel"
@@ -62,10 +63,19 @@ func NewSQLite(dbfile, level string) *gorm.DB {
 	return sqlite
 }
 
-func SetTx(tx *gorm.DB, count *int64, req *commontypes.GetDataReq) {
+func SetTx(tx *gorm.DB, count *int64, req *commontypes.GetDataReq, role, tenant string) {
+	if (req.Tablename == "application" ||
+		req.Tablename == "application_template" ||
+		req.Tablename == "image_repository" ||
+		req.Tablename == "task_history" ||
+		req.Tablename == "helm_repositories") && role != constant.ROLE_ADMIN {
+		tx.Where("tenant = ?", tenant)
+	}
 	if req.Search != "" {
-		searchStmt := strings.Split(req.Search, "==")
-		tx.Where(fmt.Sprintf("%s LIKE ?", searchStmt[0]), "%"+searchStmt[1]+"%")
+		for _, search := range strings.Split(req.Search, ",") {
+			searchStmt := strings.Split(search, "==")
+			tx.Where(fmt.Sprintf("%s LIKE ?", searchStmt[0]), "%"+searchStmt[1]+"%")
+		}
 	}
 	if req.Filter != "" {
 		for _, filter := range strings.Split(req.Filter, ",") {
@@ -82,7 +92,7 @@ func SetTx(tx *gorm.DB, count *int64, req *commontypes.GetDataReq) {
 	tx.Count(count)
 	tx = tx.Limit(req.Size).Offset((req.Page - 1) * req.Size)
 	if req.Sort != "" {
-		tx = tx.Order(req.Sort)
+		tx.Order(req.Sort)
 	}
 }
 
@@ -93,7 +103,7 @@ func tracingBefore(db *gorm.DB) {
 func tracingAfter(db *gorm.DB) {
 	stmt := db.Dialector.Explain(db.Statement.SQL.String(), db.Statement.Vars...)
 	ctx := db.Statement.Context
-	spanName, ok := ctx.Value("SpanName").(string)
+	spanName, ok := ctx.Value(commontypes.TraceIDKey{}).(string)
 	if !ok {
 		spanName = "TiDB"
 	}

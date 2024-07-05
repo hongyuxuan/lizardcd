@@ -18,11 +18,10 @@ var restartCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		common.InitConfig()
 
-		if err := common.LizardServer.Patch(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/deployments/%s/rollout", cluster, namespace, name)).Do(context.Background()).Err; err != nil {
-			fmt.Printf("\033[0;31;40mrollout restart deployment failed: %v\033[0m\n", err)
-			return
+		if err := common.LizardServer.Patch(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/deployments/%s/rollout", cluster, namespace, name)).Do(context.Background()).Err; err != nil {
+			common.PrintFatal("rollout restart deployment failed: %v", err)
 		}
-		fmt.Printf("\033[0;32;40mrollout restart deployment success\033[0m\n")
+		common.PrintSuccess("rollout restart deployment:%s success", name)
 	},
 }
 

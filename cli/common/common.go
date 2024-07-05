@@ -1,11 +1,13 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 
+	"github.com/gookit/color"
 	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/otel"
@@ -14,6 +16,7 @@ import (
 var LogLevel string
 var ConfigFile string
 var LizardServer *utils.HttpClient
+var Nocolor bool
 
 func InitConfig() {
 	utils.InitLogger(LogLevel)
@@ -44,6 +47,10 @@ func InitConfig() {
 	if access_token := viper.GetString("lizardcd.auth.access_token"); access_token != "" {
 		LizardServer.SetCommonBearerAuthToken(access_token)
 	}
+	if LogLevel == "debug" {
+		LizardServer.EnableDebugLog()
+		LizardServer.EnableDumpAll()
+	}
 	utils.Log.Debugf("init lizardcd-server client %s success", serverAddr)
 }
 
@@ -51,4 +58,29 @@ func GetExec() string {
 	path, _ := os.Executable()
 	_, exec := filepath.Split(path)
 	return exec
+}
+
+func PrintFatal(format string, a ...any) {
+	if Nocolor {
+		fmt.Printf(format+"\n", a...)
+	} else {
+		color.Red.Printf(format+"\n", a...)
+	}
+	os.Exit(1)
+}
+
+func PrintError(format string, a ...any) {
+	if Nocolor {
+		fmt.Printf(format+"\n", a...)
+	} else {
+		color.Red.Printf(format+"\n", a...)
+	}
+}
+
+func PrintSuccess(format string, a ...any) {
+	if Nocolor {
+		fmt.Printf(format+"\n", a...)
+	} else {
+		color.Green.Printf(format+"\n", a...)
+	}
 }

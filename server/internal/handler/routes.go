@@ -6,8 +6,14 @@ import (
 
 	auth "github.com/hongyuxuan/lizardcd/server/internal/handler/auth"
 	db "github.com/hongyuxuan/lizardcd/server/internal/handler/db"
+	helm "github.com/hongyuxuan/lizardcd/server/internal/handler/helm"
+	httpd "github.com/hongyuxuan/lizardcd/server/internal/handler/httpd"
+	istio "github.com/hongyuxuan/lizardcd/server/internal/handler/istio"
 	kubernetes "github.com/hongyuxuan/lizardcd/server/internal/handler/kubernetes"
 	lizardcd "github.com/hongyuxuan/lizardcd/server/internal/handler/lizardcd"
+	static "github.com/hongyuxuan/lizardcd/server/internal/handler/static"
+	task "github.com/hongyuxuan/lizardcd/server/internal/handler/task"
+	vm "github.com/hongyuxuan/lizardcd/server/internal/handler/vm"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -15,140 +21,54 @@ import (
 
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/services",
-				Handler: lizardcd.ListservicesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/services/:service_name",
-				Handler: lizardcd.GetserviceHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/clusters",
-				Handler: lizardcd.ListclustersHandler(serverCtx),
-			},
-		},
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/version",
+					Handler: lizardcd.VersionHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/services",
+					Handler: lizardcd.ListservicesHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/services/:service_name",
+					Handler: lizardcd.GetserviceHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/clusters",
+					Handler: lizardcd.ListclustersHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/repo/image/tags",
+					Handler: lizardcd.ListimagetagsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/targets",
+					Handler: lizardcd.ListtargetsHandler(serverCtx),
+				},
+			}...,
+		),
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/lizardcd"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodPatch,
-				Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name",
-				Handler: kubernetes.PatchDeploymentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPatch,
-				Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name",
-				Handler: kubernetes.PatchStatefulsetHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPatch,
-				Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/rollout",
-				Handler: kubernetes.RolloutDeploymentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPatch,
-				Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/rollout",
-				Handler: kubernetes.RolloutStatefulsetHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPatch,
-				Path:    "/cluster/:cluster/namespace/:namespace/deployments/scale",
-				Handler: kubernetes.ScaleDeploymentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPatch,
-				Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/scale",
-				Handler: kubernetes.ScaleStatefulsetHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml",
-				Handler: kubernetes.GetYamlHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPatch,
-				Path:    "/cluster/:cluster/namespace/:namespace/apply/yaml",
-				Handler: kubernetes.PatchYamlHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/cluster/:cluster/namespace/:namespace/deployments",
-				Handler: kubernetes.ListDeploymentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/cluster/:cluster/namespace/:namespace/statefulsets",
-				Handler: kubernetes.ListStatefulsetHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/pods",
-				Handler: kubernetes.DeploymentPodsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/pods",
-				Handler: kubernetes.StatefulsetPodsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/cluster/:cluster/namespace/:namespace/pods/:pod_name/events",
-				Handler: kubernetes.PodEventsHandler(serverCtx),
-			},
-		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/kubernetes"),
+		rest.WithPrefix("/lizardcd/server"),
 	)
 
 	server.AddRoutes(
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
-				Path:    "/:tablename",
-				Handler: db.ListdataHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/:tablename/:id",
-				Handler: db.GetdataHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/:tablename",
-				Handler: db.CreatedataHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/:tablename/:id",
-				Handler: db.UpdatedataHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodDelete,
-				Path:    "/:tablename/:id",
-				Handler: db.DeletedataHandler(serverCtx),
+				Path:    "/docs/:filename",
+				Handler: static.DocfileHandler(serverCtx),
 			},
 		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/db"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodPost,
-				Path:    "/login",
-				Handler: auth.LoginHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/auth"),
+		rest.WithPrefix("/lizardcd/server-static"),
 	)
 
 	server.AddRoutes(
@@ -163,8 +83,339 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/chpasswd",
 				Handler: auth.ChpasswdHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/adduser",
+				Handler: auth.AdduserHandler(serverCtx),
+			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/auth"),
+		rest.WithPrefix("/lizardcd/auth"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/login",
+				Handler: auth.LoginHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/lizardcd/auth"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/:tablename",
+					Handler: db.ListdataHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/:tablename/:id",
+					Handler: db.GetdataHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/:tablename",
+					Handler: db.CreatedataHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/:tablename/:id",
+					Handler: db.UpdatedataHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/:tablename/:id",
+					Handler: db.DeletedataHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/lizardcd/db"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/repos",
+					Handler: helm.ListRepoHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/repo",
+					Handler: helm.AddRepoHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/cluster/:cluster/namespace/:namespace/repo/update",
+					Handler: helm.UpdateChartsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/repo/:repo_name",
+					Handler: helm.DeleteRepoHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/repo/:repo_name",
+					Handler: helm.SearchChartHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/repo/:name/:chart_name",
+					Handler: helm.SearchChartVersionHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/cluster/:cluster/namespace/:namespace/charts/install",
+					Handler: helm.InstallChartHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/cluster/:cluster/namespace/:namespace/charts/uninstall",
+					Handler: helm.UninstallChartHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/cluster/:cluster/namespace/:namespace/charts/upgrade",
+					Handler: helm.UpgradeChartHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/releases",
+					Handler: helm.ListReleaseHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/repo/charts/values",
+					Handler: helm.ShowValuesHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/repo/charts/readme",
+					Handler: helm.ShowReadmeHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/repo/charts/download",
+					Handler: helm.DownloadHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/release/values",
+					Handler: helm.GetValuesHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/release/history",
+					Handler: helm.ReleaseHistoryHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/cluster/:cluster/namespace/:namespace/release/rollback",
+					Handler: helm.RollbackHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/lizardcd/helm"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/destinationrules",
+					Handler: istio.ListDestinationRuleHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/virtualservices",
+					Handler: istio.ListVirtualServiceHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml",
+					Handler: istio.GetIstioCrdHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/lizardcd/istio"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name",
+					Handler: kubernetes.PatchDeploymentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name",
+					Handler: kubernetes.PatchStatefulsetHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/rollout",
+					Handler: kubernetes.RolloutDeploymentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/rollout",
+					Handler: kubernetes.RolloutStatefulsetHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/deployments/scale",
+					Handler: kubernetes.ScaleDeploymentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/scale",
+					Handler: kubernetes.ScaleStatefulsetHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml",
+					Handler: kubernetes.GetYamlHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name",
+					Handler: kubernetes.DeleteResourceHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/apply/yaml",
+					Handler: kubernetes.PatchYamlHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/apply/variable",
+					Handler: kubernetes.PatchVariableHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/deployments",
+					Handler: kubernetes.ListDeploymentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets",
+					Handler: kubernetes.ListStatefulsetHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name",
+					Handler: kubernetes.GetDeploymentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name",
+					Handler: kubernetes.GetStatefulsetHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/pods",
+					Handler: kubernetes.DeploymentPodsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/pods",
+					Handler: kubernetes.StatefulsetPodsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/events",
+					Handler: kubernetes.EventsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/status",
+					Handler: kubernetes.DeploymentPodStatusHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/quota",
+					Handler: kubernetes.ResourceQuotaHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/lizardcd/kubernetes"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/run",
+					Handler: task.RunTaskHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/history/:id",
+					Handler: task.DeleteHistoryHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/lizardcd/task"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/deploy",
+					Handler: vm.DeployHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/healthcheck",
+					Handler: vm.HealthcheckHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/lizardcd/vm"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Validateuser},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/deploy",
+					Handler: httpd.HttpdeployHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/healthcheck",
+					Handler: httpd.HttpcheckHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/lizardcd/http"),
 	)
 }

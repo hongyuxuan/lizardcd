@@ -1,6 +1,9 @@
 package errorx
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 type LizardcdError struct {
 	Code    int         `json:"code"`
@@ -18,8 +21,8 @@ func NewError(code int, message string, data interface{}) error {
 	return &LizardcdError{Code: code, Message: message, Data: data}
 }
 
-func NewDefaultError(message string) error {
-	return &LizardcdError{Code: http.StatusInternalServerError, Message: message}
+func NewDefaultError(message string, a ...any) error {
+	return &LizardcdError{Code: http.StatusInternalServerError, Message: fmt.Sprintf(message, a...)}
 }
 
 func (e *LizardcdError) Error() string {

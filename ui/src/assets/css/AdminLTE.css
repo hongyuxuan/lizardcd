@@ -1602,7 +1602,7 @@ a:focus {
   border-top-right-radius: 0;
   border-bottom-right-radius: 3px;
   border-bottom-left-radius: 3px;
-  padding: 10px 15px;
+  padding: 20px 20px;
 }
 .no-header .box-body {
   border-top-right-radius: 3px;
@@ -4412,6 +4412,9 @@ table.text-center th {
 }
 .bg-maroon-active {
   background-color: #ca195a !important;
+}
+.ep-bg-purple {
+  background-color: #d3dce6 !important;
 }
 
 /* 自定义背景图 */

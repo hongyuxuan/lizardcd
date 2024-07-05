@@ -7,16 +7,20 @@ Lizardcd is a lightweight cloud native continuous delivery project, which is a s
 
 # What is Lizardcd
 ![](https://project-1255547500.cos.ap-beijing.myqcloud.com/lizardcd%2Flizardcd%E6%9E%B6%E6%9E%84%E5%9B%BE.png)
-Lizardcd is a cloud native continuous delivery tool for kubernetes. It works in server-agent mode with grpc framework. The agent can run as a `deployment` in one or more kubernetes cluster, or run as an `executed binary package` out of kubernetes with a kubeconfig. The server can run everywhere, as an executed binary package, a docker or a deployment in kubernetes. Lizardcd needs a service registry center for service automatically discovery, we supoorts `etcd`, `consul` and `nacos`.
+Lizardcd is a cloud native continuous delivery tool for kubernetes. It works in server-agent mode with grpc framework. The agent can run as a `deployment` in one or more kubernetes cluster, or run as an `executed binary package` out of kubernetes with a kubeconfig. The server can run everywhere, as an executed binary package, a docker or a deployment in kubernetes. Lizardcd needs a service registry center for service automatically discovery, we supoorts `etcd`, `consul` and `nacos`, default `etcd`.
 
 # Features
 - Cloud native, server-agent architecture, and agent can run in/out of kubernetes cluster.
 - No need of kubeconfig and clusterrole, with In-Cluster mode, agent use a serviceaccount to communicate with kubernetes APIServer.
 - Support multi-cluster of kubernetes.
-- Agent register and discover automatically by service center.
-- Prometheus Metrics and opentelemetry built-in, support monitoring and tracing.
+- Agent register and discover automatically to service center.
 - Create resources(deployments/statefulsets/service and so on) by go-templates.
-- Access by lizardcd-ui or lizardcd-cli.
+- Application management, support deploy resources by application[v1.1.0+]. 
+- Support `Canary Release` by `Istio`[v1.1.1+], you can configure an application with traffic management using a `DestinationRule` and `VirtualService` by `Istio`, based on `weight` or `http header`.
+- Support `helm`, which includes `helm repo`, `helm search`, `helm install`, `helm get`, `helm show` and almost all of helm features.
+- Supoort task management, which can be integrated with CI platforms.
+- Deploy type supports `Kubernetes`, `Machinery` and `HTTP`, the `HTTP` can integrated with 3rd CD platform like `ansible tower/awx`, `dolphinscheduler` and so on.
+- Prometheus Metrics and opentelemetry built-in, support monitoring and tracing.
 
 # How lizardcd works
 Lizardcd is composed of lizardcd-agent, lizardcd-server, lizardcd-ui and lizardcd-cli.
@@ -36,7 +40,7 @@ For many other CD tools for kubernetes, like argocd, kubevela, which are often a
 
 Lizardcd supports multi-cluster of kubernetes, one agent for a cluster, if the agent has a cluster scope role of serviceaccount or kubeconfig. Also you can deploy many agents in a cluster and one for a namespace, if you only have a namespace scope role. 
 
-All agents will automatically register to a register center when started, and will automatically deregister when stopped. The server will also automatically discover the agents from the register center.
+All agents will automatically register to a service center when started, and will automatically deregister when stopped. The server will also automatically discover the agents from the register center.
 
 # Installation
 We support Binary package, Docker, Kubernetes(Helm charts), you can get binary packages from release pages, and docker images in [DockerHub](https://hub.docker.com/)

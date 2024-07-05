@@ -39,8 +39,7 @@ func (l *DeleteYamlLogic) DeleteYaml(in *agent.YamlRequest) (*agent.Response, er
 	}
 	failed := []string{}
 	for _, ch := range chArr {
-		var res map[string]interface{}
-		res = <-ch
+		res := <-ch
 		if res["success"] == false {
 			failed = append(failed, res["message"].(string))
 		}

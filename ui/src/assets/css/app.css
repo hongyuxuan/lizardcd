@@ -1,4 +1,4 @@
-div:not(.el-step__icon):not(.el-slider__button):not(.el-progress-bar__inner):not(.el-switch__action):not(.el-timeline *),
+div:not(.el-step__icon):not(.el-slider__button):not(.el-progress-bar__inner):not(.el-switch__action):not(.el-timeline *):not(.el-backtop),
 span.el-checkbox__inner,
 input,select, textarea,
 img:not(.img-circle),
@@ -36,14 +36,25 @@ ul, li, label, pre, form,
   justify-content: space-between;
   align-items: center;
   font-size: 18px;
+  position: relative;
+}
+.card-header .box-tools {
+  position: absolute;
+  right: 0px;
+  top: 5px;
+}
+.card-header-btn {
+  padding: 5px;
+}
+.card-header-btn:hover {
+  background-color: #e9e7e7;
+  cursor: pointer;
 }
 
 .card-body {
   text-align: left;
   font-size: 14px;
 }
-
-
 
 ul:not(.el-upload-list) {
   margin: 0 !important;
@@ -62,7 +73,7 @@ ul:not(.el-upload-list) {
   padding:15px 0 0 0
 }
 .card .card-text {
-  padding:10px;
+  padding:8px 10px;
   font-size:18px;
   text-align:center;
 }
@@ -224,14 +235,15 @@ ul:not(.el-upload-list) {
   font-size: 15px;
 }
 
-.el-table.line-height40 .cell {
+.el-table.line-height40 .el-table__cell {
   line-height: 40px;
 }
-
+.el-table .el-table__cell .cell {
+  line-height: inherit !important;
+}
 .el-table .cell > .el-icon {
   font-size: 16px;
 }
-
 .el-table .el-table__expand-icon {
   height: inherit !important;
 }
@@ -258,4 +270,59 @@ ul:not(.el-upload-list) {
 
 .contact .fa-folder {
   color: #3399CC;
+}
+
+.el-collapse-item__content {
+  font-size: 15px;
+}
+
+.el-collapse-item__content .el-switch,
+.el-collapse-item__content .el-input {
+  float: right
+}
+
+.el-card {
+  margin-bottom: 15px;
+}
+
+.statistic .el-col {
+  text-align: center;
+}
+
+.statistic .statistic__head {
+  color: #606266;
+  font-size: 14px;
+  line-height: 25px;
+  margin-bottom: 4px;
+}
+
+.statistic .statistic__content {
+  font-weight: bold;
+  font-size: 20px;
+  color: #303133;
+}
+
+.el-form-item .el-form-item {
+  margin-bottom: 18px !important;
+}
+
+.el-form-item .card-header {
+  font-size: 16px !important;
+}
+
+.el-form-item .el-card__header {
+  padding: 10px 15px !important;
+}
+
+.el-form-item .el-card__body {
+  padding-bottom: 10px !important;
+}
+
+.el-image .image-slot {
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+}
+
+.el-collapse-item__content .el-divider--horizontal {
+  margin: 10px 0;
 }

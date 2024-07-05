@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 
 	"github.com/imroc/req/v3"
 	"go.opentelemetry.io/otel"
@@ -49,7 +50,7 @@ func NewHttpClient(tracer trace.Tracer) *HttpClient {
 		}).
 		WrapRoundTripFunc(func(rt req.RoundTripper) req.RoundTripFunc {
 			return func(req *req.Request) (resp *req.Response, err error) {
-				spanName, ok := req.Context().Value("SpanName").(string)
+				spanName, ok := req.Context().Value(commontypes.TraceIDKey{}).(string)
 				if !ok {
 					spanName = req.URL.Path
 				}

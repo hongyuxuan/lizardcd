@@ -7,6 +7,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +35,7 @@ func (l *StatefulsetPodsLogic) StatefulsetPods(req *types.RolloutReq) (resp *typ
 		return
 	}
 	var rpcResponse *agent.Response
-	if rpcResponse, err = ag.GetStatefulsetPod(context.WithValue(l.ctx, "SpanName", "rpc.StatefulsetPods"), &agent.GetWorkloadRequest{
+	if rpcResponse, err = ag.GetStatefulsetPod(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.StatefulsetPods"), &agent.GetWorkloadRequest{
 		Namespace:    req.Namespace,
 		WorkloadName: req.WorkloadName,
 	}); err != nil {

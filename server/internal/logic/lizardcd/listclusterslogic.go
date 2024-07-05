@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
+	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 	"github.com/samber/lo"
@@ -31,18 +32,30 @@ func NewListclustersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *List
 	}
 }
 
-func (l *ListclustersLogic) Listclusters() (resp *types.Response, err error) {
+func (l *ListclustersLogic) Listclusters(req *types.ListClusterReq) (resp *types.Response, err error) {
 	res, err := l.listservicesLogic.Listservices()
 	var clusterMap = make(map[string][]string)
-	for _, service := range res.Data.([]map[string]string) {
-		arr := strings.Split(service["service_name"], ".")
-		namespace := arr[1]
-		cluster := arr[2]
+	for _, svc := range res.Data.([]map[string]string) {
+		meta, err := utils.GetServiceMata(l.svcCtx.Config.ServicePrefix, svc["service_name"])
+		if err != nil {
+			l.Logger.Error(err)
+			continue
+		}
+		service := meta["Service"]
+		cluster := meta["Cluster"]
+		namespace := meta["Namespace"]
+		if strings.Contains(service, "agent_vm") {
+			if !req.WithVm {
+				continue
+			} else {
+				cluster = "vm"
+			}
+		}
 		if _, ok := clusterMap[cluster]; !ok {
 			clusterMap[cluster] = []string{}
 		}
 		if namespace == "*" {
-			nss := l.getNamespaces(service["service_name"])
+			nss := l.getNamespaces(svc["service_name"])
 			clusterMap[cluster] = append(clusterMap[cluster], nss...)
 		} else {
 			clusterMap[cluster] = append(clusterMap[cluster], namespace)

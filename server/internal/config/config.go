@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -21,6 +22,17 @@ type Config struct {
 	Etcd          EtcdConf   `json:",optional"`
 	ServicePrefix string     `json:",optional"`
 	Sqlite        string
+	Rpc           RpcOption `json:",optional"`
+}
+
+type RpcOption struct {
+	Timeout       int64 `json:",optional"`
+	KeepaliveTime int64 `json:",optional"`
+	RetryInterval int64 `json:",optional"`
+}
+
+func (rpc RpcOption) IsEmpty() bool {
+	return reflect.DeepEqual(rpc, RpcOption{})
 }
 
 type NacosConf struct {
@@ -108,10 +120,22 @@ func NewConfig(configFile, logLevel, consulAddr, etcdAddr, nacosAddr, nacosNames
 	if *accessExpire != 0 {
 		c.Auth.AccessExpire = *accessExpire
 	}
-
+	if c.Rpc.IsEmpty() {
+		c.Rpc = RpcOption{}
+	}
+	if c.Rpc.KeepaliveTime == 0 {
+		c.Rpc.KeepaliveTime = 600
+	}
+	if c.Rpc.Timeout == 0 {
+		c.Rpc.Timeout = 2000
+	}
+	if c.Rpc.RetryInterval == 0 {
+		c.Rpc.RetryInterval = 10
+	}
 	if c.Etcd.Address == "" && c.Consul.Address == "" && c.Nacos.Address == "" {
 		logx.Errorf("Either etcd, consul or nacos address must be specified.")
 		os.Exit(0)
 	}
+	logx.Infof("Using config: %+v", c)
 	return c
 }

@@ -21,16 +21,20 @@ var podCmd = &cobra.Command{
 
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"podname", "podip", "nodename", "state", "message"})
-		colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
-		table.SetHeaderColor(colors, colors, colors, colors, colors)
+		if !common.Nocolor {
+			colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
+			table.SetHeaderColor(colors, colors, colors, colors, colors)
+		}
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetAutoWrapText(false)
 
 		data := svc.WritePodData(cluster, namespace, "statefulsets", name)
 		for _, row := range data {
 			colors := tablewriter.Colors{}
-			if row[4] != "" {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgRedColor}
+			if !common.Nocolor {
+				if row[4] != "" {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgRedColor}
+				}
 			}
 			table.Rich(row, []tablewriter.Colors{{}, {}, {}, {}, colors})
 		}

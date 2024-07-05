@@ -13,7 +13,6 @@ import (
 	"github.com/hongyuxuan/lizardcd/cli/common"
 	"github.com/hongyuxuan/lizardcd/cli/svc"
 	"github.com/hongyuxuan/lizardcd/cli/types"
-	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -32,14 +31,16 @@ var listCmd = &cobra.Command{
 
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"name", "state", "lastupdate"})
-		colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
-		table.SetHeaderColor(colors, colors, colors)
+		if !common.Nocolor {
+			colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
+			table.SetHeaderColor(colors, colors, colors)
+		}
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetAutoWrapText(false)
 
 		var res *types.StatefulsetRes
-		if err := common.LizardServer.Get(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/statefulsets", cluster, namespace)).SetResult(&res).Do(context.Background()).Err; err != nil {
-			utils.Log.Fatalf("failed to get statefulset list of cluster=%s, namespace=%s: %v", cluster, namespace, err)
+		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/statefulsets", cluster, namespace)).SetResult(&res).Do(context.Background()).Err; err != nil {
+			common.PrintFatal("failed to get statefulset list of cluster=%s, namespace=%s: %v", cluster, namespace, err)
 		}
 
 		var data [][]string
@@ -62,12 +63,14 @@ var listCmd = &cobra.Command{
 
 		for _, row := range data {
 			var colors tablewriter.Colors
-			if strings.HasPrefix(row[1], "running") {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgGreenColor}
-			} else if strings.HasPrefix(row[1], "updating") {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgYellowColor}
-			} else if strings.HasPrefix(row[1], "stopped") {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgHiBlackColor}
+			if !common.Nocolor {
+				if strings.HasPrefix(row[1], "running") {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgGreenColor}
+				} else if strings.HasPrefix(row[1], "updating") {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgYellowColor}
+				} else if strings.HasPrefix(row[1], "stopped") {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgHiBlackColor}
+				}
 			}
 			table.Rich(row, []tablewriter.Colors{{}, colors, {}})
 		}

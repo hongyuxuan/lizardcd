@@ -11,7 +11,6 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/cli/common"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
-	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +28,7 @@ var ApplyCmd = &cobra.Command{
 
 		b, err := ioutil.ReadFile(manifest)
 		if err != nil {
-			utils.Log.Fatalf("failed to read file %s: %v", manifest, err)
+			common.PrintFatal("failed to read file %s: %v", manifest, err)
 		}
 		vars := make(map[string]interface{})
 		if variables != "" {
@@ -39,13 +38,14 @@ var ApplyCmd = &cobra.Command{
 			}
 		}
 		var res *commontypes.Response
-		if err := common.LizardServer.Patch(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/apply/yaml", cluster, namespace)).SetBody(map[string]interface{}{
+		if err := common.LizardServer.Patch(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/apply/yaml", cluster, namespace)).SetBody(map[string]interface{}{
 			"content":   string(b),
 			"variables": vars,
 		}).SetResult(&res).Do(context.Background()).Err; err != nil {
-			utils.Log.Fatalf("failed to apply file \"%s\" to cluster=%s, namespace=%s: %v", manifest, cluster, namespace, err)
+			common.PrintFatal("failed to apply file \"%s\" to cluster=%s, namespace=%s: %v", manifest, cluster, namespace, err)
+		} else {
+			common.PrintSuccess(res.Message)
 		}
-		utils.Log.Infof(res.Message)
 	},
 }
 

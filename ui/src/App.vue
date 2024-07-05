@@ -1,13 +1,20 @@
 <template>
   <el-container>
     <el-aside width="240px">
-      <Sidebar />
+      <el-container>
+        <el-main style="padding:0">
+          <Sidebar />
+        </el-main>
+        <el-footer style="position: fixed;bottom:0;">
+          当前版本: {{ version }}
+        </el-footer>
+      </el-container>
     </el-aside>
     <el-container>
       <el-header height="56px">
         <HeadBar />
       </el-header>
-      <el-main>
+      <el-main >
         <router-view :key="viewKey" />
       </el-main>
     </el-container>
@@ -24,24 +31,41 @@ import HeadBar from './components/header.vue'
 import { axios } from '/src/assets/util/axios'
 /* 变量定义 */
 const store = useStore()
-const route = useRoute()
 const router = useRouter()
 const viewKey = computed(() => {
   return router.currentRoute.value.fullPath
 })
+const version = ref("")
 /* 生命周期函数 */
 onBeforeMount(async () => {
   checkLogin()
+  getVersion()
+  getSettings()
 })
 /* methods */
 const checkLogin = async () => {
-  let response = await axios.get(`/auth/user/info`, {
+  let response = await axios.get(`/lizardcd/auth/user/info`, {
     headers: {
       'Authorization': `Bearer ${localStorage.access_token}`
     }
   })
   localStorage.username = response.username
   store.state.username = response.username
+  store.state.role = response.role
+  localStorage.tenant = response.tenant
+}
+const getVersion = async () => {
+  version.value = await axios.get(`/lizardcd/server/version`)
+}
+const getSettings = async () => {
+  let response = await axios.get(`/lizardcd/db/settings?size=1000&filter=tenant==${localStorage.tenant}`)
+  let settings = {}
+  for(let x of response.results) {
+    if(x.setting_value === 'true' || x.setting_value === 'false')
+      x.setting_value = JSON.parse(x.setting_value)
+    settings[x.setting_key] = x.setting_value
+  }
+  store.state.settings = settings
 }
 </script>
 
@@ -64,10 +88,8 @@ body {
 }
 
 .el-footer {
-  background-color: #fff;
-  color: var(--el-text-color-primary);
   text-align: center;
-  line-height: 60px;
+  line-height: 55px;
 }
 
 .el-aside {

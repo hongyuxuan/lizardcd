@@ -35,12 +35,11 @@ func (l *ApplyYamlLogic) ApplyYaml(in *agent.YamlRequest) (*agent.Response, erro
 	for _, y := range yamlArr {
 		taskResult := make(chan map[string]interface{})
 		chArr = append(chArr, taskResult)
-		go l.K8sService.UpdateFromYaml(in.Namespace, y, taskResult)
+		go l.K8sService.UpdateFromYaml(in.Namespace, y, in.Kind, taskResult)
 	}
 	failed := []string{}
 	for _, ch := range chArr {
-		var res map[string]interface{}
-		res = <-ch
+		res := <-ch
 		if res["success"] == false {
 			failed = append(failed, res["message"].(string))
 		}

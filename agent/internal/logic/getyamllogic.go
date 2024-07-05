@@ -6,6 +6,7 @@ import (
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -31,17 +32,15 @@ func (l *GetyamlLogic) Getyaml(in *agent.GetYamlRequest) (resp *agent.YamlRespon
 	if in.ResourceType == "deployments" || in.ResourceType == "statefulsets" {
 		if res, err = l.K8sService.GetAppsV1ResourceYAML(in.Namespace, in.ResourceType, in.ResourceName); err != nil {
 			l.Logger.Error(err)
-			return
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else if in.ResourceType == "ingresses" {
 		if res, err = l.K8sService.GetIngressYAML(in.Namespace, in.ResourceName); err != nil {
-			l.Logger.Error(err)
-			return
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
 		if res, err = l.K8sService.GetCoreV1ResourceYAML(in.Namespace, in.ResourceType, in.ResourceName); err != nil {
-			l.Logger.Error(err)
-			return
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 	resp = &agent.YamlResponse{

@@ -9,7 +9,6 @@ import (
 
 	common "github.com/hongyuxuan/lizardcd/cli/common"
 	"github.com/hongyuxuan/lizardcd/cli/types"
-	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -22,8 +21,8 @@ var ListCmd = &cobra.Command{
 		common.InitConfig()
 
 		var res *types.LizardAgentRes
-		if err := common.LizardServer.Get("/lizardcd/services").SetResult(&res).Do(context.Background()).Err; err != nil {
-			utils.Log.Fatalf("failed to get lizardcd agent list: %v", err)
+		if err := common.LizardServer.Get("/lizardcd/server/services").SetResult(&res).Do(context.Background()).Err; err != nil {
+			common.PrintFatal("failed to get lizardcd agent list: %v\n", err)
 		}
 
 		var data [][]string
@@ -34,7 +33,9 @@ var ListCmd = &cobra.Command{
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"lizardcd agent"})
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetHeaderColor(tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor})
+		if !common.Nocolor {
+			table.SetHeaderColor(tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor})
+		}
 		table.AppendBulk(data)
 		table.Render()
 	},

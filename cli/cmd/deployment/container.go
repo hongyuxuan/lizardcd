@@ -25,8 +25,10 @@ var containerCmd = &cobra.Command{
 
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"container", "status", "state", "restart_count"})
-		colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
-		table.SetHeaderColor(colors, colors, colors, colors)
+		if !common.Nocolor {
+			colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
+			table.SetHeaderColor(colors, colors, colors, colors)
+		}
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetAutoWrapText(false)
 
@@ -37,14 +39,18 @@ var containerCmd = &cobra.Command{
 
 		for _, row := range data {
 			var colors tablewriter.Colors
-			if strings.HasPrefix(row[1], "running") {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgGreenColor}
-			} else if strings.HasPrefix(row[1], "waiting") {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgYellowColor}
-			} else if strings.HasPrefix(row[1], "terminated") {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgHiBlackColor}
+			var restartColor tablewriter.Colors
+			if !common.Nocolor {
+				restartColor = tablewriter.Colors{tablewriter.Normal, tablewriter.FgCyanColor}
+				if strings.HasPrefix(row[1], "running") {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgGreenColor}
+				} else if strings.HasPrefix(row[1], "waiting") {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgYellowColor}
+				} else if strings.HasPrefix(row[1], "terminated") {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgHiBlackColor}
+				}
 			}
-			table.Rich(row, []tablewriter.Colors{{}, colors, colors, {tablewriter.Normal, tablewriter.FgCyanColor}})
+			table.Rich(row, []tablewriter.Colors{{}, colors, colors, restartColor})
 		}
 		table.Render()
 	},

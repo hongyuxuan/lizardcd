@@ -7,6 +7,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -34,7 +35,7 @@ func (l *DeploymentPodsLogic) DeploymentPods(req *types.RolloutReq) (resp *types
 		return
 	}
 	var rpcResponse *agent.Response
-	if rpcResponse, err = ag.GetDeploymentPod(context.WithValue(l.ctx, "SpanName", "rpc.DeploymentPods"), &agent.GetWorkloadRequest{
+	if rpcResponse, err = ag.GetDeploymentPod(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.DeploymentPods"), &agent.GetWorkloadRequest{
 		Namespace:    req.Namespace,
 		WorkloadName: req.WorkloadName,
 	}); err != nil {

@@ -9,10 +9,10 @@ Prometheus:
   Port: 15017
   Path: /metrics
 Kubeconfig: kubeconfig
-# Etcd:
-#   Hosts:
-#     - 10.50.89.17:8089
-#   Key: lizardcd-agent.*.tektonk8s # lizardcd-agent.<namespace>.<cluster>
+Etcd:
+  Hosts:
+    - 10.50.89.17:8089
+  Key: lizardcd-agent.*.tektonk8s # lizardcd-agent.<namespace>.<cluster>
 # Consul:
 #   Host: 10.50.89.17:8086
 #   Key: lizardcd-agent.*.tektonk8s # lizardcd-agent.<namespace>.<cluster>
@@ -22,16 +22,17 @@ Kubeconfig: kubeconfig
 #     Service: lizardcd-agent
 #     Namespace: '*'
 #     Cluster: tektonk8s
-Nacos:
-  Host: 10.50.101.107:50003
-  Key: lizardcd-agent.*.tektonk8s # lizardcd-agent.<namespace>.<cluster>
-  NamespaceId: public
-  Group: DEFAULT_GROUP
-  Username: nacos
-  Password: nacos
-  Meta: # custom your metadata here
-    Protocol: grpc
-    Service: lizardcd-agent
-    Namespace: '*'
-    Cluster: tektonk8s
-ServicePrefix: 
+# Nacos:
+#   Host: 10.100.67.41:8848
+#   Key: lizardcd-agent.*.tektonk8s
+#   NamespaceId: fiops
+#   Group: default
+#   Username: fiops_test
+#   Password: a1363fff4381a5080b0044755524cb03
+#   Meta:
+#     Protocol: grpc
+#     Service: lizardcd-agent
+#     Namespace: "*"
+#     Cluster: tektonk8s
+ServicePrefix: it-gm-lizardcd-
+KubernetesSecretPrefix: default-token

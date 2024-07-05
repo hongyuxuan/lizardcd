@@ -15,10 +15,11 @@ import (
 
 type Config struct {
 	zrpc.RpcServerConf
-	Consul        consul.Conf `json:",optional"`
-	Nacos         NacosConf   `json:",optional"`
-	Kubeconfig    string      `json:",optional"`
-	ServicePrefix string      `json:",optional"`
+	Consul                 consul.Conf `json:",optional"`
+	Nacos                  NacosConf   `json:",optional"`
+	Kubeconfig             string      `json:",optional"`
+	ServicePrefix          string      `json:",optional"`
+	KubernetesSecretPrefix string      `json:",optional"`
 }
 
 type NacosConf struct {
@@ -64,8 +65,13 @@ func NewConfig(configFile, logLevel, consulHost, etcdHost, nacosHost, nacosNames
 	if *consulHost != "" {
 		c.Consul.Host = *consulHost
 		if *serviceKey != "" {
+			meta, err := utils.GetServiceMata(*servicePrefix, *serviceKey)
+			if err != nil {
+				logx.Error(err)
+				os.Exit(0)
+			}
 			c.Consul.Key = *serviceKey
-			c.Consul.Meta = utils.GetServiceMata(*serviceKey)
+			c.Consul.Meta = meta
 		}
 	}
 	if *etcdHost != "" {
@@ -107,10 +113,13 @@ func NewConfig(configFile, logLevel, consulHost, etcdHost, nacosHost, nacosNames
 		port, _ := strconv.Atoi(arr[1])
 		c.Prometheus.Port = port
 	}
-
+	if c.KubernetesSecretPrefix == "" {
+		c.KubernetesSecretPrefix = "default-token" // default token prefix
+	}
 	if len(c.Etcd.Hosts) == 0 && c.Consul.Host == "" && c.Nacos.Host == "" {
 		logx.Errorf("Either etcd host, consul host or nacos host must be specified.")
 		os.Exit(0)
 	}
+	logx.Infof("Using config: %+v", c)
 	return c
 }

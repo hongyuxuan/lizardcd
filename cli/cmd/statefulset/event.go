@@ -21,16 +21,20 @@ var eventCmd = &cobra.Command{
 
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"type", "reason", "age", "from", "message"})
-		colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
-		table.SetHeaderColor(colors, colors, colors, colors, colors)
+		if !common.Nocolor {
+			colors := tablewriter.Colors{tablewriter.Bold, tablewriter.BgGreenColor}
+			table.SetHeaderColor(colors, colors, colors, colors, colors)
+		}
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetAutoWrapText(false)
 
 		data := svc.GetEvents(cluster, namespace, pod)
 		for _, row := range data {
 			colors := tablewriter.Colors{}
-			if row[0] == "Warning" {
-				colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgRedColor}
+			if !common.Nocolor {
+				if row[0] == "Warning" {
+					colors = tablewriter.Colors{tablewriter.Normal, tablewriter.FgRedColor}
+				}
 			}
 			table.Rich(row, []tablewriter.Colors{colors, colors, {}, {}, colors})
 		}

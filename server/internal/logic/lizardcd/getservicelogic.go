@@ -42,10 +42,11 @@ func (l *GetserviceLogic) Getservice(req *types.GetServiceReq) (resp *types.Resp
 		var keymaps []map[string]interface{}
 		for _, kv := range res.Kvs {
 			key := utils.GetLizardAgentKey(kv.Key)
+			meta, _ := utils.GetServiceMata(l.svcCtx.Config.ServicePrefix, key)
 			keymaps = append(keymaps, map[string]interface{}{
 				"ServiceID":   fmt.Sprintf("%s-%s", key, string(kv.Value)),
 				"ServiceName": key,
-				"ServiceMeta": utils.GetServiceMata(key),
+				"ServiceMeta": meta,
 			})
 		}
 		resp = &types.Response{

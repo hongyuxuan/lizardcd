@@ -4,7 +4,7 @@ Port: 5117
 Timeout: 60000
 Log:
   Encoding: plain
-  Level: info 
+  Level: info
 Prometheus:
   Host: 0.0.0.0
   Port: 15117
@@ -12,15 +12,19 @@ Prometheus:
 Auth:
   AccessSecret: wLnOk8keh/WO5u7lX8H1dB1/mcuHvnI/jfWCMXMPg9o=
   AccessExpire: 86400
-# Etcd:
-#   Address: 10.50.89.17:8089
-# Consul:
-#   Address: 10.50.89.17:8086
-Nacos:
-  Address: 10.50.101.107:50003
-  NamespaceId: public
-  Group: DEFAULT_GROUP
-  Username: nacos
-  Password: nacos
+Etcd:
+  Address: 10.50.89.17:8089
+Consul:
+  Address: 10.50.89.17:8086
+# Nacos:
+#   Address: 10.100.67.41:8848
+#   NamespaceId: fiops
+#   Group: default
+#   Username: fiops_test
+#   Password: a1363fff4381a5080b0044755524cb03
 Sqlite: ./lizardcd.db
-ServicePrefix:
+ServicePrefix: it-gm-lizardcd-
+Rpc:
+  Timeout: 2000 # millisecond
+  KeepaliveTime: 600 # seconds
+  RetryInterval: 600 # seconds 

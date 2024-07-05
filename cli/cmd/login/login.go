@@ -8,7 +8,6 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/cli/common"
 	"github.com/hongyuxuan/lizardcd/common/types"
-	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -24,11 +23,11 @@ var LoginCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		common.InitConfig()
 		var res *types.LoginRes
-		if err := common.LizardServer.Post("/auth/login").SetBody(map[string]string{
+		if err := common.LizardServer.Post("/lizardcd/auth/login").SetBody(map[string]string{
 			"username": username,
 			"password": password,
 		}).SetResult(&res).Do(context.Background()).Err; err != nil {
-			utils.Log.Fatal(err)
+			common.PrintFatal(err.Error())
 		}
 		viper.Set("lizardcd.auth.access_token", res.AccessToken)
 		if save {

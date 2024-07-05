@@ -22,6 +22,7 @@ func NewLizardAgentServer(svcCtx *svc.ServiceContext) *LizardAgentServer {
 	}
 }
 
+// kubernetes
 func (s *LizardAgentServer) PatchDeployment(ctx context.Context, in *agent.PatchWorkloadRequest) (*agent.Response, error) {
 	l := logic.NewPatchDeploymentLogic(ctx, s.svcCtx)
 	return l.PatchDeployment(in)
@@ -32,14 +33,24 @@ func (s *LizardAgentServer) PatchStatefulset(ctx context.Context, in *agent.Patc
 	return l.PatchStatefulset(in)
 }
 
-func (s *LizardAgentServer) ListDeployment(ctx context.Context, in *agent.ListWorkloadRequest) (*agent.Response, error) {
+func (s *LizardAgentServer) ListDeployment(ctx context.Context, in *agent.ListResourceRequest) (*agent.Response, error) {
 	l := logic.NewListDeploymentLogic(ctx, s.svcCtx)
 	return l.ListDeployment(in)
 }
 
-func (s *LizardAgentServer) ListStatefulset(ctx context.Context, in *agent.ListWorkloadRequest) (*agent.Response, error) {
+func (s *LizardAgentServer) ListStatefulset(ctx context.Context, in *agent.ListResourceRequest) (*agent.Response, error) {
 	l := logic.NewListStatefulsetLogic(ctx, s.svcCtx)
 	return l.ListStatefulset(in)
+}
+
+func (s *LizardAgentServer) DeleteDeployment(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewDeleteDeploymentLogic(ctx, s.svcCtx)
+	return l.DeleteDeployment(in)
+}
+
+func (s *LizardAgentServer) DeleteStatefulset(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewDeleteStatefulsetLogic(ctx, s.svcCtx)
+	return l.DeleteStatefulset(in)
 }
 
 func (s *LizardAgentServer) GetDeploymentPod(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
@@ -52,9 +63,14 @@ func (s *LizardAgentServer) GetStatefulsetPod(ctx context.Context, in *agent.Get
 	return l.GetStatefulsetPod(in)
 }
 
-func (s *LizardAgentServer) GetPodEvent(ctx context.Context, in *agent.GetPodEventRequest) (*agent.Response, error) {
-	l := logic.NewGetPodEventLogic(ctx, s.svcCtx)
-	return l.GetPodEvent(in)
+func (s *LizardAgentServer) GetEvent(ctx context.Context, in *agent.GetEventRequest) (*agent.Response, error) {
+	l := logic.NewGetEventLogic(ctx, s.svcCtx)
+	return l.GetEvent(in)
+}
+
+func (s *LizardAgentServer) GetPodStatus(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewGetPodStatusLogic(ctx, s.svcCtx)
+	return l.GetPodStatus(in)
 }
 
 func (s *LizardAgentServer) DeleteYaml(ctx context.Context, in *agent.YamlRequest) (*agent.Response, error) {
@@ -95,4 +111,127 @@ func (s *LizardAgentServer) ScaleStatefulset(ctx context.Context, in *agent.Scal
 func (s *LizardAgentServer) GetNamespaces(ctx context.Context, in *agent.LabelSelector) (*agent.Response, error) {
 	l := logic.NewGetNamespacesLogic(ctx, s.svcCtx)
 	return l.GetNamespaces(in)
+}
+
+func (s *LizardAgentServer) GetDeployment(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewGetDeploymentLogic(ctx, s.svcCtx)
+	return l.GetDeployment(in)
+}
+
+func (s *LizardAgentServer) GetStatefulset(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewGetStatefulsetLogic(ctx, s.svcCtx)
+	return l.GetStatefulset(in)
+}
+
+func (s *LizardAgentServer) GetDeploymentQuota(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewGetDeploymentQuotaLogic(ctx, s.svcCtx)
+	return l.GetDeploymentQuota(in)
+}
+
+func (s *LizardAgentServer) GetStatefulsetQuota(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewGetStatefulsetQuotaLogic(ctx, s.svcCtx)
+	return l.GetStatefulsetQuota(in)
+}
+
+// istio
+func (s *LizardAgentServer) CreateDestinationRule(ctx context.Context, in *agent.IstioCreateRequest) (*agent.Response, error) {
+	l := logic.NewCreateDestinationRuleLogic(ctx, s.svcCtx)
+	return l.CreateDestinationRule(in)
+}
+
+func (s *LizardAgentServer) PatchDestinationRule(ctx context.Context, in *agent.IstioPatchRequest) (*agent.Response, error) {
+	l := logic.NewPatchDestinationRuleLogic(ctx, s.svcCtx)
+	return l.PatchDestinationRule(in)
+}
+
+func (s *LizardAgentServer) ListDestinationRule(ctx context.Context, in *agent.ListResourceRequest) (*agent.Response, error) {
+	l := logic.NewListDestinationRuleLogic(ctx, s.svcCtx)
+	return l.ListDestinationRule(in)
+}
+
+func (s *LizardAgentServer) GetDestinationRule(ctx context.Context, in *agent.IstioGetRequest) (*agent.Response, error) {
+	l := logic.NewGetDestinationRuleLogic(ctx, s.svcCtx)
+	return l.GetDestinationRule(in)
+}
+
+func (s *LizardAgentServer) DeleteDestinationRule(ctx context.Context, in *agent.IstioGetRequest) (*agent.Response, error) {
+	l := logic.NewDeleteDestinationRuleLogic(ctx, s.svcCtx)
+	return l.DeleteDestinationRule(in)
+}
+
+func (s *LizardAgentServer) CreateVirtualService(ctx context.Context, in *agent.IstioCreateRequest) (*agent.Response, error) {
+	l := logic.NewCreateVirtualServiceLogic(ctx, s.svcCtx)
+	return l.CreateVirtualService(in)
+}
+
+func (s *LizardAgentServer) PatchVirtualService(ctx context.Context, in *agent.IstioPatchRequest) (*agent.Response, error) {
+	l := logic.NewPatchVirtualServiceLogic(ctx, s.svcCtx)
+	return l.PatchVirtualService(in)
+}
+
+func (s *LizardAgentServer) ListVirtualService(ctx context.Context, in *agent.ListResourceRequest) (*agent.Response, error) {
+	l := logic.NewListVirtualServiceLogic(ctx, s.svcCtx)
+	return l.ListVirtualService(in)
+}
+
+func (s *LizardAgentServer) GetVirtualService(ctx context.Context, in *agent.IstioGetRequest) (*agent.Response, error) {
+	l := logic.NewGetVirtualServiceLogic(ctx, s.svcCtx)
+	return l.GetVirtualService(in)
+}
+
+func (s *LizardAgentServer) DeleteVirtualService(ctx context.Context, in *agent.IstioGetRequest) (*agent.Response, error) {
+	l := logic.NewDeleteVirtualServiceLogic(ctx, s.svcCtx)
+	return l.DeleteVirtualService(in)
+}
+
+// helm
+func (s *LizardAgentServer) HelmUpdateRepo(ctx context.Context, in *agent.HelmEntriesRequest) (*agent.Response, error) {
+	l := logic.NewHelmUpdateRepoLogic(ctx, s.svcCtx)
+	return l.HelmUpdateRepo(in)
+}
+
+func (s *LizardAgentServer) HelmInstallChart(ctx context.Context, in *agent.HelmInstallChartRequest) (*agent.Response, error) {
+	l := logic.NewHelmInstallChartLogic(ctx, s.svcCtx)
+	return l.HelmInstallChart(in)
+}
+
+func (s *LizardAgentServer) HelmUninstallChart(ctx context.Context, in *agent.HelmInstallChartRequest) (*agent.Response, error) {
+	l := logic.NewHelmUninstallChartLogic(ctx, s.svcCtx)
+	return l.HelmUninstallChart(in)
+}
+
+func (s *LizardAgentServer) HelmUpgradeChart(ctx context.Context, in *agent.HelmInstallChartRequest) (*agent.Response, error) {
+	l := logic.NewHelmUpgradeChartLogic(ctx, s.svcCtx)
+	return l.HelmUpgradeChart(in)
+}
+
+func (s *LizardAgentServer) HelmListReleases(ctx context.Context, in *agent.ListReleasesRequest) (*agent.Response, error) {
+	l := logic.NewHelmListReleasesLogic(ctx, s.svcCtx)
+	return l.HelmListReleases(in)
+}
+
+func (s *LizardAgentServer) HelmGetValues(ctx context.Context, in *agent.ListReleasesRequest) (*agent.Response, error) {
+	l := logic.NewHelmGetValuesLogic(ctx, s.svcCtx)
+	return l.HelmGetValues(in)
+}
+
+func (s *LizardAgentServer) HelmReleaseHistory(ctx context.Context, in *agent.ListReleasesRequest) (*agent.Response, error) {
+	l := logic.NewHelmReleaseHistoryLogic(ctx, s.svcCtx)
+	return l.HelmReleaseHistory(in)
+}
+
+func (s *LizardAgentServer) HelmRollback(ctx context.Context, in *agent.HelmInstallChartRequest) (*agent.Response, error) {
+	l := logic.NewHelmRollbackLogic(ctx, s.svcCtx)
+	return l.HelmRollback(in)
+}
+
+// vm deploy
+func (s *LizardAgentServer) VmDeploy(ctx context.Context, in *agent.VmDeployRequest) (*agent.Response, error) {
+	l := logic.NewVmDeployLogic(ctx, s.svcCtx)
+	return l.VmDeploy(in)
+}
+
+func (s *LizardAgentServer) VmHealthCheck(ctx context.Context, in *agent.VmHealthCheckRequest) (*agent.Response, error) {
+	l := logic.NewVmHealthCheckLogic(ctx, s.svcCtx)
+	return l.VmHealthCheck(in)
 }

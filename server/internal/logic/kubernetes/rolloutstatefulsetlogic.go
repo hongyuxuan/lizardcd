@@ -7,6 +7,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -33,7 +34,7 @@ func (l *RolloutStatefulsetLogic) RolloutStatefulset(req *types.RolloutReq) (res
 		return
 	}
 	var rpcResponse *agent.Response
-	if rpcResponse, err = ag.RolloutStatefulset(context.WithValue(l.ctx, "SpanName", "rpc.RolloutStatefulset"), &agent.RolloutWorkloadRequest{
+	if rpcResponse, err = ag.RolloutStatefulset(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.RolloutStatefulset"), &agent.RolloutWorkloadRequest{
 		Namespace:    req.Namespace,
 		WorkloadName: req.WorkloadName,
 	}); err != nil {

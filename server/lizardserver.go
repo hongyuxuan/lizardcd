@@ -48,6 +48,7 @@ func main() {
 	kingpin.Version(printVersion())
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
+	logx.MustSetup(logx.LogConf{Encoding: "plain", Level: "info"})
 
 	c := config.NewConfig(
 		configFile,
@@ -75,6 +76,7 @@ func main() {
 	defer server.Stop()
 
 	ctx := svc.NewServiceContext(c)
+	ctx.SetVersion(AppVersion)
 	handler.RegisterHandlers(server, ctx)
 
 	httpx.SetErrorHandler(func(err error) (int, interface{}) {

@@ -28,7 +28,7 @@ func NewListStatefulsetLogic(ctx context.Context, svcCtx *svc.ServiceContext) *L
 	}
 }
 
-func (l *ListStatefulsetLogic) ListStatefulset(in *agent.ListWorkloadRequest) (*agent.Response, error) {
+func (l *ListStatefulsetLogic) ListStatefulset(in *agent.ListResourceRequest) (*agent.Response, error) {
 	res, err := l.K8sService.ListStatefulset(in.Namespace, in.LabelSelector)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

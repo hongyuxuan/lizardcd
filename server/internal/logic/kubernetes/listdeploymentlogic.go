@@ -7,6 +7,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 	v1 "k8s.io/api/apps/v1"
@@ -34,7 +35,7 @@ func (l *ListDeploymentLogic) ListDeployment(req *types.ListWorkloadReq) (resp *
 		return
 	}
 	var rpcResponse *agent.Response
-	if rpcResponse, err = ag.ListDeployment(context.WithValue(l.ctx, "SpanName", "rpc.ListDeployment"), &agent.ListWorkloadRequest{
+	if rpcResponse, err = ag.ListDeployment(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.ListDeployment"), &agent.ListResourceRequest{
 		Namespace:     req.Namespace,
 		LabelSelector: req.LabelSelector,
 	}); err != nil {
@@ -43,6 +44,9 @@ func (l *ListDeploymentLogic) ListDeployment(req *types.ListWorkloadReq) (resp *
 	}
 	var r []v1.Deployment
 	json.Unmarshal(rpcResponse.Data, &r)
+	if r == nil {
+		r = make([]v1.Deployment, 0)
+	}
 	resp = &types.Response{
 		Code: http.StatusOK,
 		Data: r,

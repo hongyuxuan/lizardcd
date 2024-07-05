@@ -9,15 +9,14 @@ import (
 	"github.com/golang-module/carbon"
 	"github.com/hongyuxuan/lizardcd/cli/common"
 	"github.com/hongyuxuan/lizardcd/cli/types"
-	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func WritePodData(cluster, namespace, workloadType, workloadName string) (data [][]string) {
 	var res *types.PodRes
-	if err := common.LizardServer.Get(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/%s/%s/pods", cluster, namespace, workloadType, workloadName)).SetResult(&res).Do(context.Background()).Err; err != nil {
-		utils.Log.Fatalf("failed to get pods of cluster=%s, namespace=%s, %s=%s: %v", cluster, namespace, workloadType, workloadName, err)
+	if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/%s/%s/pods", cluster, namespace, workloadType, workloadName)).SetResult(&res).Do(context.Background()).Err; err != nil {
+		common.PrintFatal("failed to get pods of cluster=%s, namespace=%s, %s=%s: %v\n", cluster, namespace, workloadType, workloadName, err)
 	}
 
 	for _, d := range res.Data {
@@ -45,14 +44,14 @@ func WritePodData(cluster, namespace, workloadType, workloadName string) (data [
 
 func GetPod(cluster, namespace, workloadType, workloadName, podName string) corev1.Pod {
 	var res *types.PodRes
-	if err := common.LizardServer.Get(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/%s/%s/pods", cluster, namespace, workloadType, workloadName)).SetResult(&res).Do(context.Background()).Err; err != nil {
-		utils.Log.Fatalf("failed to get statefulset pods of cluster=%s, namespace=%s, %s=%s: %v", cluster, namespace, workloadType, workloadName, err)
+	if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/%s/%s/pods", cluster, namespace, workloadType, workloadName)).SetResult(&res).Do(context.Background()).Err; err != nil {
+		common.PrintFatal("failed to get statefulset pods of cluster=%s, namespace=%s, %s=%s: %v\n", cluster, namespace, workloadType, workloadName, err)
 	}
 	p, ok := lo.Find(res.Data, func(item corev1.Pod) bool {
 		return item.Name == podName
 	})
 	if !ok {
-		utils.Log.Fatalf("cannot find pod=%s in cluster=%s namespace=%s %s=%s", podName, cluster, namespace, workloadType, workloadName)
+		common.PrintFatal("cannot find pod=%s in cluster=%s namespace=%s %s=%s\n", podName, cluster, namespace, workloadType, workloadName)
 	}
 	return p
 }
@@ -95,8 +94,8 @@ func WriteContainerData(containerStatus []corev1.ContainerStatus, containers []c
 
 func GetEvents(cluster, namespace, podName string) (data [][]string) {
 	var res *types.EventRes
-	if err := common.LizardServer.Get(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/pods/%s/events", cluster, namespace, podName)).SetResult(&res).Do(context.Background()).Err; err != nil {
-		utils.Log.Fatalf("failed to get events of cluster=%s, namespace=%s, pod=%s: %v", cluster, namespace, podName, err)
+	if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/Pod/%s/events", cluster, namespace, podName)).SetResult(&res).Do(context.Background()).Err; err != nil {
+		common.PrintFatal("failed to get events of cluster=%s, namespace=%s, pod=%s: %v\n", cluster, namespace, podName, err)
 	}
 	for _, d := range res.Data {
 		row := []string{d.Type, d.Reason, carbon.FromStdTime(d.EventTime.Time).Format("Y-m-d H:i:s"), d.Source.Component, d.Message}

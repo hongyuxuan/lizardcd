@@ -21,11 +21,10 @@ var setCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		common.InitConfig()
 
-		if err := common.LizardServer.Patch(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/statefulsets/%s?container=%s&image=%s", cluster, namespace, name, container, image)).Do(context.Background()).Err; err != nil {
-			fmt.Printf("\033[0;31;40mset statefulset image failed: %v\033[0m\n", err)
-			return
+		if err := common.LizardServer.Patch(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/statefulsets/%s?container=%s&image=%s", cluster, namespace, name, container, image)).Do(context.Background()).Err; err != nil {
+			common.PrintFatal("set statefulset image failed: %v", err)
 		}
-		fmt.Printf("\033[0;32;40mset statefulset image success\033[0m\n")
+		common.PrintSuccess("set statefulset:%s image:%s success", name, image)
 	},
 }
 

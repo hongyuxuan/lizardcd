@@ -5,6 +5,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -31,7 +32,7 @@ func (l *GetYamlLogic) GetYaml(req *types.ResourceReq) (resp string, err error) 
 		return
 	}
 	var rpcResponse *agent.YamlResponse
-	if rpcResponse, err = ag.Getyaml(context.WithValue(l.ctx, "SpanName", "rpc.GetAppsYaml"), &agent.GetYamlRequest{
+	if rpcResponse, err = ag.Getyaml(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.GetAppsYaml"), &agent.GetYamlRequest{
 		Namespace:    req.Namespace,
 		ResourceType: req.ResourceType,
 		ResourceName: req.ResourceName,

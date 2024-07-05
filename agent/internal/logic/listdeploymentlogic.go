@@ -28,7 +28,7 @@ func NewListDeploymentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Li
 	}
 }
 
-func (l *ListDeploymentLogic) ListDeployment(in *agent.ListWorkloadRequest) (*agent.Response, error) {
+func (l *ListDeploymentLogic) ListDeployment(in *agent.ListResourceRequest) (*agent.Response, error) {
 	res, err := l.K8sService.ListDeployment(in.Namespace, in.LabelSelector)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

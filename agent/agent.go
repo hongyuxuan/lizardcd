@@ -52,6 +52,7 @@ func main() {
 	kingpin.Version(printVersion())
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
+	logx.MustSetup(logx.LogConf{Encoding: "plain"})
 
 	c := config.NewConfig(
 		configFile,
@@ -75,6 +76,7 @@ func main() {
 	ctx := svc.NewServiceContext(c)
 	s := zrpc.MustNewServer(c.RpcServerConf, func(grpcServer *grpc.Server) {
 		agent.RegisterLizardAgentServer(grpcServer, server.NewLizardAgentServer(ctx))
+		logx.Infof("Lizardcd-agent: %s register to etcd success", c.Etcd.Key)
 
 		if c.Mode == service.DevMode || c.Mode == service.TestMode {
 			reflection.Register(grpcServer)

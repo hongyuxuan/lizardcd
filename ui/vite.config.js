@@ -30,18 +30,6 @@ export default defineConfig({
         target: 'http://localhost:5117',
         changeOrigin: true,
       },
-      '/kubernetes': {
-        target: 'http://localhost:5117',
-        changeOrigin: true,
-      },
-      '/db': {
-        target: 'http://localhost:5117',
-        changeOrigin: true,
-      },
-      '/auth': {
-        target: 'http://localhost:5117',
-        changeOrigin: true,
-      },
     }
   }
 })

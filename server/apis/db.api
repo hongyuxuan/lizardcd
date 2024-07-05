@@ -1,0 +1,61 @@
+type (
+	GetDataReq {
+		Tablename string `path:"tablename"`
+		Page      int    `form:"page,default=1"`
+		Size      int    `form:"size,default=20"`
+		Search    string `form:"search,optional"`
+		Filter    string `form:"filter,optional"`
+		Range     string `form:"range,optional"`
+		Sort      string `form:"sort,optional"`
+    Preload   bool   `form:"preload,optional"`
+	}
+	DataByIdReq {
+		Tablename string `path:"tablename"`
+		Id        string `path:"id"`
+	}
+	CreateDataReq {
+		Tablename string                 `path:"tablename"`
+		Body      map[string]interface{} `json:"body"`
+	}
+	UpdateDataReq {
+		DataByIdReq
+		Body map[string]interface{} `json:"body"`
+	}
+)
+@server(
+	prefix: /lizardcd/db
+	group: db
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 获取表数据
+	)
+	@handler listdata
+	get /:tablename (GetDataReq) returns (Response)
+	
+	@doc(
+		summary: 根据ID获取表数据
+	)
+	@handler getdata
+	get /:tablename/:id (DataByIdReq) returns (Response)
+	
+	@doc(
+		summary: 新增表数据
+	)
+	@handler createdata
+	post /:tablename (CreateDataReq) returns (Response)
+	
+	@doc(
+		summary: 根据ID更新数据
+	)
+	@handler updatedata
+	put /:tablename/:id (UpdateDataReq) returns (Response)
+	
+	@doc(
+		summary: 根据ID删除数据
+	)
+	@handler deletedata
+	delete /:tablename/:id (DataByIdReq) returns (Response)
+}

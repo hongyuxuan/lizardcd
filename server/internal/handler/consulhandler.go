@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	capi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
@@ -13,6 +14,8 @@ import (
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/zrpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 type WatchHandler interface {
@@ -34,20 +37,25 @@ func (c ConsulWatch) Handler(_ uint64, data interface{}) {
 				continue
 			}
 			if strings.HasPrefix(k, c.svcCtx.Config.ServicePrefix+"lizardcd-agent") {
-				logx.Infof("A new lizardcd-agent: %s registered into consul", k)
 				// add lizardcd-agent service to agentList
 				if _, ok := c.svcCtx.AgentList[k]; !ok {
 					cli, err := zrpc.NewClient(zrpc.RpcClientConf{
-						Timeout: 5000,
+						Timeout: c.svcCtx.Config.Rpc.Timeout,
 						Target:  fmt.Sprintf("consul://%s/%s?wait=60s", c.svcCtx.Config.Consul.Address, k),
-					})
+					}, zrpc.WithDialOption(grpc.WithKeepaliveParams(keepalive.ClientParameters{
+						Time:                time.Duration(c.svcCtx.Config.Rpc.KeepaliveTime) * time.Second,
+						Timeout:             time.Second,
+						PermitWithoutStream: true,
+					})))
 					if err != nil {
 						logx.Error(err)
 						continue
 					}
+					logx.Infof("A new lizardcd-agent: %s registered into consul", k)
 					c.svcCtx.AgentList[k] = &types.RpcAgent{
 						Client:        lizardagent.NewLizardAgent(cli),
 						ServiceSource: "consul",
+						Cli:           cli,
 					}
 				}
 			}
@@ -64,8 +72,8 @@ func (c ConsulWatch) Handler(_ uint64, data interface{}) {
 				plan.Stop()
 				delete(watchers, k)
 				if strings.HasPrefix(k, c.svcCtx.Config.ServicePrefix+"lizardcd-agent") {
-					logx.Infof("Lizardcd-agent: %s removed from consul", k)
 					delete(c.svcCtx.AgentList, k)
+					logx.Infof("Lizardcd-agent: %s removed from consul", k)
 				}
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -26,7 +27,7 @@ func NewDeletedataLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 
 func (l *DeletedataLogic) Deletedata(req *types.DataByIdReq) (resp *types.Response, err error) {
 	data := map[string]interface{}{}
-	if err = l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, "SpanName", "sqlite.DeleteData")).Table(req.Tablename).Where("id = ?", req.Id).Delete(&data).Error; err != nil {
+	if err = l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteData")).Table(req.Tablename).Where("id = ?", req.Id).Delete(&data).Error; err != nil {
 		return
 	}
 	resp = &types.Response{

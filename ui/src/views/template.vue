@@ -7,26 +7,28 @@
   <template #header>
     <div class="card-header">
       <span class="card-header-text">YAML模板</span>
-      <span class="pull-right pointer" @click="getList(current)"><el-icon><Refresh /></el-icon></span>
     </div>
   </template>
   <el-row>
     <el-alert title="关于模板用法参考Go-template：https://pkg.go.dev/text/template" type="warning" style="margin-bottom:15px" />
     <el-col :span="12">
       <el-button-group>
+        <el-button :icon="Refresh" size="large" style="margin-right:5px" @click="getList(current)" />
         <el-input v-model="searchKey" placeholder="输入名称进行搜索" size="large" :prefix-icon="Search" @change="getPage(1)" clearable style="width:300px;" />
       </el-button-group>
     </el-col>
     <el-col :span="12">
-      <el-button class="pull-right" size="large" type="primary" @click="show=true;form={content:'',variables:[{key:'',value:''}]}">新建模板</el-button>
+      <el-button class="pull-right" size="large" type="primary" @click="show=true;edit=false;form={content:'',variables:[{key:'',value:''}],tenant:tenant}">新建模板</el-button>
     </el-col>
   </el-row>
   <el-table 
     :data="list" 
-    :show-header="false" 
+    v-loading="loading.table"
+    element-loading-text="奋力加载中..."
     class="line-height40" 
     style="width:100%;margin-top:10px">
     <el-table-column prop="name" label="模板名称" min-width="160" />
+    <el-table-column prop="tenant" label="所属租户" min-width="80" />
     <el-table-column prop="update_at" label="更新时间" width="160">
       <template #default="scope">
         {{ moment(scope.row.update_at).format('YYYY-MM-DD HH:mm') }}
@@ -50,9 +52,10 @@
     class="pull-right"
     background 
     v-model:page-size="pageSize"
-    :page-sizes="[20, 30, 50, 100]"
-    layout="total, sizes, prev, pager, next, jumper" 
+    :page-sizes="[10, 30, 50, 100]"
+    layout="total, sizes, prev, pager, fnext, jumper" 
     :total="pageTotal"
+    @size-change="handleSizeChange"
     @current-change="getList"
     v-model:current-page="current" />
 </el-card>
@@ -96,6 +99,9 @@
           </tbody>
         </table>
       </el-form-item>
+      <el-form-item label="所属租户" prop="tenant">
+        <el-input v-model="form.tenant" disabled size="large" />
+      </el-form-item>
     </el-form>
   </template>
   <template #footer>
@@ -120,12 +126,15 @@ import 'ace-builds/src-noconflict/mode-yaml'
 import 'ace-builds/src-noconflict/theme-chrome'
 import 'ace-builds/src-noconflict/ext-language_tools'
 /* 变量定义 */
-const all = ref([])
+const tenant = localStorage.tenant
 const list = ref([])
 const pageSize = ref(10)
 const pageTotal = ref(0)
 const current = ref(1)
 const searchKey = ref("")
+const loading = ref({
+  table: false
+})
 const show = ref(false)
 const edit = ref(false)
 const form = ref({content:'',variables:[{key:'',value:''}]})
@@ -142,7 +151,7 @@ onBeforeMount(async () => {
 const getList = async (page) => {
   let url = `page=${page}&size=${pageSize.value}&sort=update_at desc`
   if(searchKey.value != "") url += `&search=name==${searchKey.value}`
-  let response = await axios.get(`/db/application_template?${url}`)
+  let response = await axios.get(`/lizardcd/db/application_template?${url}`)
   list.value = response.results.map(x => {
     x.variables = JSON.parse(x.variables)
     return x
@@ -151,6 +160,7 @@ const getList = async (page) => {
 }
 const editOne = async (row) => {
   form.value = row
+  form.value.tenant ||= localStorage.tenant
   edit.value = true
   show.value = true
 }
@@ -174,7 +184,7 @@ const confirmClick = async (f) => {
       params.variables = JSON.stringify(params.variables)
       params.update_at = moment()
       if(edit.value === false) {
-        await axios.post(`/db/application_template`, {body:params})
+        await axios.post(`/lizardcd/db/application_template`, {body:params})
         getList(1)
         current.value = 1
         show.value = false
@@ -182,7 +192,7 @@ const confirmClick = async (f) => {
       else {
         let id = params.id
         delete params.id
-        await axios.put(`/db/application_template/${id}`, {body:params})
+        await axios.put(`/lizardcd/db/application_template/${id}`, {body:params})
         getList(current.value)
         show.value = false
       }
@@ -193,7 +203,11 @@ const confirmClick = async (f) => {
   })
 }
 const deleteOne = async (row) => {
-  await axios.delete(`/db/application_template/${row.id}`)
+  await axios.delete(`/lizardcd/db/application_template/${row.id}`)
   getList(current.value)
+}
+const handleSizeChange = async (size) => {
+  pageSize.value = size
+  await getList(current.value)
 }
 </script>

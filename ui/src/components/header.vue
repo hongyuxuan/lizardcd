@@ -13,12 +13,18 @@
         <span style="margin-left:15px">{{username}}</span>
       </div>
     </el-menu-item>
-    <el-sub-menu index="2">
+    <el-menu-item index="2">
+      <el-tooltip effect="dark" content="swagger文档" placement="bottom">
+        <font-awesome-icon :icon="['far', 'circle-question']" style="font-size:20px" />
+      </el-tooltip>
+    </el-menu-item>
+    <el-sub-menu index="3">
       <template #title>
         <font-awesome-icon icon="gears" style="font-size:20px" />
       </template>
-      <el-menu-item index="2-1">修改密码</el-menu-item>
-      <el-menu-item index="2-2">注销</el-menu-item>
+      <el-menu-item index="3-1">配置</el-menu-item>
+      <el-menu-item index="3-2">修改密码</el-menu-item>
+      <el-menu-item index="3-3">注销</el-menu-item>
     </el-sub-menu>
   </el-menu>
   <el-dialog v-model="show.modify" title="修改密码" width="600px">
@@ -43,9 +49,11 @@
 <script setup>
 import { ref, computed, reactive } from 'vue'
 import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { axios } from '/src/assets/util/axios'
 /* 变量定义 */
+const router = useRouter()
 const store = useStore()
 const avator = ref("/images/avator.png")
 const username = computed(() => {
@@ -68,8 +76,10 @@ const refModify = ref(null)
 /* methods */
 const handleSelect = (index) => {
   switch(index) {
-    case '2-1': show.value.modify = true;break
-    case '2-2': logout();break
+    case '2': window.open('/swagger/', '_blank');break
+    case '3-1': router.push('/platform/settings');break
+    case '3-2': show.value.modify = true;break
+    case '3-3': logout();break
   }
 }
 const logout = async () => {
@@ -87,7 +97,7 @@ const submit = async (f) => {
       }
       params.username = localStorage.username
       delete params.confirmPassword
-      await axios.post(`/auth/chpasswd`, params)
+      await axios.post(`/lizardcd/auth/chpasswd`, params)
       window.location.href = "/login/"
     } else {
       ElMessage.warning('必填项未填完')

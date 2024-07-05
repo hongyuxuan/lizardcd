@@ -21,7 +21,7 @@ var scaleCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		common.InitConfig()
 
-		if err := common.LizardServer.Patch(fmt.Sprintf("/kubernetes/cluster/%s/namespace/%s/statefulsets/scale", cluster, namespace)).SetBody(&types.ScaleReq{
+		if err := common.LizardServer.Patch(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/statefulsets/scale", cluster, namespace)).SetBody(&types.ScaleReq{
 			Workloads: []types.Workloads{
 				{
 					Name:     name,
@@ -29,10 +29,9 @@ var scaleCmd = &cobra.Command{
 				},
 			},
 		}).Do(context.Background()).Err; err != nil {
-			fmt.Printf("\033[0;31;40mset statefulset replicas failed: %v\033[0m\n", err)
-			return
+			common.PrintFatal("set statefulset replicas failed: %v", err)
 		}
-		fmt.Printf("\033[0;32;40mset statefulset replicas success\033[0m\n")
+		common.PrintSuccess("set statefulset:%s replicas:%d success", name, replicas)
 	},
 }
 
