@@ -1,0 +1,234 @@
+type (
+	PatchWorkloadReq {
+		Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+		WorkloadName string `path:"workload_name"`
+		Container    string `form:"container"`
+		Image        string `form:"image"`
+	}
+	ListWorkloadReq {
+		Cluster       string `path:"cluster"`
+		Namespace     string `path:"namespace"`
+		LabelSelector string `form:"label_selector,optional"`
+	}
+	RolloutReq {
+		Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+		WorkloadName string `path:"workload_name"`
+	}
+  ListResourceReq {
+		Cluster       string `path:"cluster"`
+		Namespace     string `path:"namespace"`
+    ResourceType  string `path:"resource_type"`
+		LabelSelector string `form:"label_selector,optional"`
+	}
+	ResourceReq {
+		Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+		ResourceType string `path:"resource_type"`
+		ResourceName string `path:"resource_name,optional"`
+	}
+	PatchVariableReq {
+		Cluster   string                 `path:"cluster"`
+		Namespace string                 `path:"namespace"`
+		Kind      string                 `form:"kind,optional"`
+		Content   string                 `json:"content"`
+		Variables map[string]interface{} `json:"variables,optional"`
+	}
+	PatchYamlReq {
+		Cluster   string `path:"cluster"`
+		Namespace string `path:"namespace"`
+		Kind      string `form:"kind,optional"`
+	}
+	ScaleReq {
+		Cluster       string          `path:"cluster"`
+		Namespace     string          `path:"namespace"`
+		Workloads     []ScaleWorkload `json:"workloads"`
+	}
+	ScaleWorkload {
+		Name     string `json:"name"`
+		Replicas int    `json:"replicas"`
+		Disabled bool   `json:"disabled,optional"`
+	}
+  ReplicaReq {
+    Cluster       string   `path:"cluster"`
+		Namespace     string   `path:"namespace"`
+    Workloads     []string `json:"workloads"`
+    InitContainer bool     `json:"initContainer,optional"`
+  }
+	GetServiceReq {
+		ServiceName string `path:"service_name"`
+	}
+	ListTagsReq {
+		AppName string `form:"app_name"`
+    Tag string `form:"tag,optional"`
+	}
+  PodLogReq {
+		Cluster   string `path:"cluster"`
+		Namespace string `path:"namespace"`
+    PodName   string `path:"pod_name"`
+		Container string `form:"container"`
+    Lines     int64  `form:"lines"`
+    Follow    bool   `form:"follow,optional"`
+  }
+  HpaReq {
+    Cluster      string `path:"cluster"`
+		Namespace    string `path:"namespace"`
+    WorkloadName string `path:"workload_name"`
+    Max          int32  `json:"max"`
+    Min          int32  `json:"min"`
+    Cpu          int32  `json:"cpu,optional"`
+    Memory       int32  `json:"memory,optional"`
+  }
+)
+@server(
+	prefix: /lizardcd/kubernetes
+	group: kubernetes
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 更新deployment
+	)
+	@handler patchDeployment
+	patch /cluster/:cluster/namespace/:namespace/deployments/:workload_name (PatchWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 更新statefulset
+	)
+	@handler patchStatefulset
+	patch /cluster/:cluster/namespace/:namespace/statefulsets/:workload_name (PatchWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 重启deployment
+	)
+	@handler rolloutDeployment
+	patch /cluster/:cluster/namespace/:namespace/deployments/:workload_name/rollout (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 重启statefulset
+	)
+	@handler rolloutStatefulset
+	patch /cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/rollout (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 设置deployment副本数
+	)
+	@handler scaleDeployment
+	patch /cluster/:cluster/namespace/:namespace/deployments/scale (ScaleReq) returns (Response)
+	
+	@doc(
+		summary: 设置statefulset副本数
+	)
+	@handler scaleStatefulset
+	patch /cluster/:cluster/namespace/:namespace/statefulsets/scale (ScaleReq) returns (Response)
+
+  @doc(
+		summary: 获取deployment副本数
+	)
+	@handler deploymentReplicas
+	post /cluster/:cluster/namespace/:namespace/deployments/replicas (ReplicaReq) returns (Response)
+
+  @doc(
+		summary: 获取deployment镜像
+	)
+	@handler deploymentImages
+	post /cluster/:cluster/namespace/:namespace/deployments/images (ReplicaReq) returns (Response)
+	
+	@doc(
+		summary: 获取yaml配置
+	)
+	@handler getYaml
+	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml (ResourceReq) returns (string)
+	
+	@doc(
+		summary: 删除资源
+	)
+	@handler deleteResource
+	delete /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name (ResourceReq) returns (Response)
+	
+	@doc(
+		summary: 更新yaml
+	)
+	@handler patchYaml
+	patch /cluster/:cluster/namespace/:namespace/apply/yaml (PatchYamlReq) returns (Response)
+	
+	@doc(
+		summary: 更新yaml带variable
+	)
+	@handler patchVariable
+	patch /cluster/:cluster/namespace/:namespace/apply/variable (PatchVariableReq) returns (Response)
+	
+	@doc(
+		summary: 获取deployments列表
+	)
+	@handler listDeployment
+	get /cluster/:cluster/namespace/:namespace/deployments (ListWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 获取statefulsets列表
+	)
+	@handler listStatefulset
+	get /cluster/:cluster/namespace/:namespace/statefulsets (ListWorkloadReq) returns (Response)
+	
+	@doc(
+		summary: 获取deployments信息
+	)
+	@handler getDeployment
+	get /cluster/:cluster/namespace/:namespace/deployments/:workload_name (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 获取statefulsets信息
+	)
+	@handler getStatefulset
+	get /cluster/:cluster/namespace/:namespace/statefulsets/:workload_name (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 获取deploymentPods信息
+	)
+	@handler deploymentPods
+	get /cluster/:cluster/namespace/:namespace/deployments/:workload_name/pods (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 获取statefulsetPods信息
+	)
+	@handler statefulsetPods
+	get /cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/pods (RolloutReq) returns (Response)
+	
+	@doc(
+		summary: 获取Pod事件
+	)
+	@handler events
+	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/events (ResourceReq) returns (Response)
+
+  @doc(
+		summary: 获取Pod日志
+	)
+	@handler podLogs
+	get /cluster/:cluster/namespace/:namespace/pods/:pod_name/logs (PodLogReq) returns (string)
+	
+	@doc(
+		summary: 获取部署后Pod状态
+	)
+	@handler deploymentPodStatus
+	get /cluster/:cluster/namespace/:namespace/deployments/:workload_name/status (RolloutReq) returns (Response)
+
+  @doc(
+		summary: 获取资源配额
+	)
+	@handler resourceQuota
+	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/quota (ResourceReq) returns (Response)
+
+  @doc(
+		summary: 设置Pod水平扩展
+	)
+	@handler sethpa
+	put /cluster/:cluster/namespace/:namespace/deployments/:workload_name/hpa (HpaReq) returns (Response)
+
+  @doc(
+		summary: 获取Pod水平扩展
+	)
+	@handler gethpa
+  get /cluster/:cluster/namespace/:namespace/deployments/:workload_name/hpa (RolloutReq) returns (Response)
+}

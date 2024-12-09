@@ -1,0 +1,44 @@
+type (
+	VmDeployReq {
+    ArtifactUrl    string            `json:"artifact_url"`
+    ArtifactHeader map[string]string `json:"artifact_header"`
+		DeployPath     string            `json:"deploy_path"`
+    DeployUser     string            `json:"deploy_user,optional"`
+    PreCommand     string            `json:"pre_command"`
+    StartCommand   string            `json:"start_command"`
+    HealthCheck    HealthCheck       `json:"health_check,optional"`
+    Targets        []string          `json:"targets"`
+	}
+
+  HealthCheck {
+    Type   string `json:"type"`
+    Method string `json:"method,optional,omitempty"`
+    Port   string `json:"port,optional,omitempty"`
+    Uri    string `json:"uri,optional,omitempty"`
+    Shell  string `json:"shell,optional,omitempty"`
+  }
+
+  HealthCheckReq {
+    HealthCheck
+    Target string `json:"target"`
+  }
+)
+@server(
+	prefix: /lizardcd/vm
+	group: vm
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 虚机部署
+	)
+	@handler deploy
+	post /deploy (VmDeployReq) returns (Response)
+
+  @doc(
+		summary: 部署健康检查
+	)
+	@handler healthcheck
+	post /healthcheck (HealthCheckReq) returns (Response)
+}

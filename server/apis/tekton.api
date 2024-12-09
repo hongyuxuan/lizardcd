@@ -1,0 +1,82 @@
+type (
+  TektontriggerReq {
+		ObjectKind string       `json:"object_kind"`
+		Before     string       `json:"before"`
+		After      string       `json:"after"`
+		Ref        string       `json:"ref"`
+		Username   string       `json:"user_name"`
+		Project    GitProject   `json:"project"`
+		Commits    []GitCommits `json:"commits"`
+	}
+  GitProject {
+		Id         int64  `json:"id"`
+		Homepage   string `json:"homepage"`
+		GitSSHUrl  string `json:"git_ssh_url"`
+		GitHttpUrl string `json:"git_http_url"`
+	}
+	GitCommits {
+		Id        string   `json:"id"`
+		Message   string   `json:"message"`
+		Title     string   `json:"title"`
+		Timestamp string   `json:"timestamp"`
+		Added     []string `json:"added,optional"`
+		Modified  []string `json:"modified,optional"`
+		Removed   []string `json:"removed,optional"`
+	}
+  TemplateReq {
+    TemplateId int `path:"id"`
+    ResourceType string `path:"resource_type"`
+    Variables map[string]interface{} `json:"variables"`
+  }
+)
+
+@server(
+	prefix: /lizardcd/tekton
+	group: tekton
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 获取tekton endpoint
+	)
+	@handler getTektonEndpoint
+	get /cluster/:cluster/namespace/:namespace/endpoint (PatchYamlReq) returns (Response)
+  @doc(
+		summary: 获取tekton资源列表
+	)
+	@handler listTektonResource
+	get /cluster/:cluster/namespace/:namespace/:resource_type (ListResourceReq) returns (Response)
+  @doc(
+		summary: 获取tekton资源
+	)
+	@handler getTektonResource
+	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name (ResourceReq) returns (Response)
+  @doc(
+		summary: 获取tekton资源yaml
+	)
+	@handler getTektonYaml
+	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml (ResourceReq) returns (Response)
+  @doc(
+		summary: 删除tekton资源
+	)
+	@handler deleteTekton
+	delete /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name (ResourceReq) returns (Response)
+  @doc(
+		summary: 创建/更新tekton资源
+	)
+	@handler applyTekton
+	post /cluster/:cluster/namespace/:namespace/apply (PatchVariableReq) returns (Response)
+}
+
+@server(
+	prefix: /lizardcd/tekton
+	group: tekton
+)
+service lizardServer {
+  @doc(
+		summary: 根据应用路径触发tekton部署
+	)
+	@handler trigger
+	post /trigger (TektontriggerReq) returns (Response)
+}

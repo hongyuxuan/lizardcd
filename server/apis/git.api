@@ -1,0 +1,31 @@
+type (
+	SyncStatusReq {
+    Apps string `form:"apps,optional"`
+	}
+)
+
+@server(
+	prefix: /lizardcd/git
+	group: git
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 获取应用同步状态
+	)
+	@handler syncstatus
+	get /sync/status (SyncStatusReq) returns (Response)
+
+  @doc(
+		summary: 获取git同步任务
+	)
+	@handler cron
+	get /cron returns (Response)
+
+  @doc(
+		summary: 删除git同步任务
+	)
+	@handler deletecron
+	delete /cron (SyncStatusReq) returns (Response)
+}

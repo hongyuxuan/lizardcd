@@ -1,0 +1,70 @@
+type (
+	RunTaskReq {
+    Id          string         `json:"id,optional"`
+		AppName     string         `json:"app_name"`
+    TaskType    string         `json:"task_type"`
+    TriggerType string         `json:"trigger_type"`
+		Labels      []string       `json:"labels,optional"`
+    Workloads   []TaskWorkload `json:"workloads,optional"`
+    ArtifactUrl string         `json:"artifact_url,optional"` // HTTP部署用
+    InitAt      string         `json:"init_at,optional"`
+    Waiting     bool           `json:"waiting,optional"`
+	}
+  TaskWorkload {
+    Cluster        string `json:"cluster,omitempty,optional"`
+    Namespace      string `json:"namespace,omitempty,optional"`
+    WorkloadType   string `json:"workload_type"`
+    WorkloadName   string `json:"workload_name"`
+    ContainerName  string `json:"container_name,omitempty,optional"`
+    ArtifactUrl    string `json:"artifact_url,optional"`
+  }
+  ExecuteTaskReq {
+    Id          string `path:"id"`
+    ArtifactUrl string `json:"artifact_url,optional"` 
+  }
+  TaskStatsReq {
+		By       string `form:"by"`
+		TimeFrom string `form:"time_from"`
+		TimeTill string `form:"time_till"`
+	}
+  AppHistoryReq {
+    Size int `form:"size"`
+    Apps string `form:"apps,optional"`
+    Sort string `form:"sort"`
+  }
+  SyncReq {
+    AppId int `path:"app_id"`
+  }
+)
+
+@server(
+	prefix: /lizardcd/task
+	group: task
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 运行任务
+	)
+	@handler runTask
+	post /run (RunTaskReq) returns (Response)
+
+  @doc(
+		summary: 执行任务
+	)
+	@handler executeTask
+	post /execute/:id (ExecuteTaskReq) returns (Response)
+
+  @doc(
+		summary: 应用部署统计
+	)
+	@handler taskstats
+	get /stats (TaskStatsReq) returns (Response)
+
+  @doc(
+		summary: 根据应用名获取任务历史
+	)
+	@handler apphistory
+	get /history_by_application (AppHistoryReq) returns (Response)
+}

@@ -1,0 +1,6 @@
+<script src="javascripts/url.min.js"></script>
+<script>
+  let params = Url.parseQuery()
+  localStorage.access_token = params.access_token
+  window.location.href = `http://${window.location.host}`
+</script>

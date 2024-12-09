@@ -1,0 +1,65 @@
+name: ds_processdefine_gitops
+content: |
+  {
+    "taskDefinitionJson": [
+      {
+        "code": {{ .TaskCode }},
+        "delayTime": "0",
+        "description": "",
+        "environmentCode": -1,
+        "failRetryInterval": "1",
+        "failRetryTimes": "0",
+        "flag": "YES",
+        "isCache": "NO",
+        "name": "gitops-synchronize",
+        "taskParams": {
+          "localParams": [],
+          "resourceList": [],
+          "httpMethod": "POST",
+          "httpBody": "{\"app_name\":\"{{ .Appname }}\",\"task_type\":\"synchronize\",\"trigger_type\":\"DS定时调度\",\"waiting\":false}",
+          "httpCheckCondition": "STATUS_CODE_DEFAULT",
+          "httpParams": [
+            {
+              "prop": "Authorization",
+              "httpParametersType": "HEADERS",
+              "value": "{{ .BearerToken }}"
+            }
+          ],
+          "url": "{{ .ServerUrl }}/lizardcd/task/run",
+          "condition": "",
+          "connectTimeout": 60000,
+          "socketTimeout": 60000
+        },
+        "taskPriority": "MEDIUM",
+        "taskType": "HTTP",
+        "timeout": 0,
+        "timeoutFlag": "CLOSE",
+        "timeoutNotifyStrategy": "",
+        "workerGroup": "default",
+        "cpuQuota": -1,
+        "memoryMax": -1,
+        "taskExecuteType": "BATCH"
+      }
+    ],
+    "locations": [
+      {
+        "taskCode": {{ .TaskCode }},
+        "x": 350,
+        "y": 150
+      }
+    ],
+    "taskRelationJson": [
+      {
+        "name": "",
+        "preTaskCode": 0,
+        "preTaskVersion": 0,
+        "postTaskCode": {{ .TaskCode }},
+        "postTaskVersion": 0,
+        "conditionType": "NONE",
+        "conditionParams": {}
+      }
+    ]
+  }
+variables: |
+  [{"key":"TaskCode","value":""},{"key":"Appname","value":""},{"key":"BearerToken","value":""},{"key":"ServerUrl","value":""}]
+type: processdefine

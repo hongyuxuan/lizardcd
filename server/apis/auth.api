@@ -1,0 +1,73 @@
+type (
+	LoginReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	ChpasswdReq {
+		Username    string `json:"username"`
+		OldPassword string `json:"oldPassword"`
+		NewPassword string `json:"newPassword"`
+	}
+  AddUserReq {
+    Username string `json:"username"`
+    Role string `json:"role"`
+    Tenant string `json:"tenant"`
+  }
+  CallbackReq {
+    Name string `path:"name"`
+		Code string `form:"code"`
+	}
+  GenereateTokenReq {
+    UserId int `json:"user_id"`
+    ExpireSeconds int64 `json:"expire_seconds"`
+  }
+)
+
+@server (
+	prefix: /lizardcd/auth
+	group: auth
+	jwt: Auth
+)
+service lizardServer {
+	@doc(
+		summary: 获取用户登录信息
+	)
+	@handler userinfo
+	get /user/info returns (Response)
+	
+	@doc(
+		summary: 修改密码
+	)
+	@handler chpasswd
+	post /chpasswd (ChpasswdReq) returns (Response)
+
+  @doc(
+		summary: 创建新用户
+	)
+	@handler adduser
+	post /adduser (AddUserReq) returns (Response)
+
+  @doc(
+		summary: 生成jwtToken
+	)
+	@handler generatetoken
+	post /token/generate (GenereateTokenReq) returns (Response)
+}
+
+@server (
+	prefix: /lizardcd/auth
+	group: auth
+)
+service lizardServer {
+	@doc(
+		summary: 登录成功后返回jwtToken
+	)
+	@handler login
+	post /login (LoginReq)
+
+  @doc(
+		summary: SSO登录的callback
+	)
+	@handler callback
+	get /callback/:name (CallbackReq)
+}

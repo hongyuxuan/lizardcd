@@ -1,0 +1,48 @@
+type (
+	HttpDeployReq {
+    ArtifactUrl     string            `json:"artifact_url"`
+		HttpMethod      string            `json:"http_method"`
+    HttpUrl         string            `json:"http_url"`
+    HttpHeader      map[string]string `json:"http_header"`
+    HttpPath        string            `json:"http_path,optional"`
+    HttpBody        string            `json:"http_body,optional"`
+    HttpContentType string            `json:"http_content_type,optional"`
+    ResJsonpath     string            `json:"res_jsonpath,optional"`
+    ResKeyword      string            `json:"res_keyword,optional"`
+    HealthCheck     HttpCheck         `json:"health_check,optional"`
+	}
+  HttpCheck {
+    Method          string `json:"method,optional,omitempty"`
+    HttpPath        string `json:"http_path,optional,omitempty"`
+    HttpBody        string `json:"http_body,optional"`
+    FinishJsonpath  string `json:"finish_jsonpath,optional,omitempty"`
+    FinishKeyword   string `json:"finish_keyword,optional,omitempty"`
+    SuccessJsonpath string `json:"success_jsonpath,optional,omitempty"`
+    SuccessKeyword  string `json:"success_keyword,optional,omitempty"`
+    MsgJsonpath     string `json:"msg_jsonpath,optional"`
+  }
+  HttpCheckReq {
+    HttpUrl       string            `json:"http_url"`
+    HttpHeader    map[string]string `json:"http_header"`
+    HttpCheck
+  }
+)
+@server(
+	prefix: /lizardcd/http
+	group: httpd
+	jwt: Auth
+  middleware: Validateuser
+)
+service lizardServer {
+	@doc(
+		summary: 虚机部署
+	)
+	@handler httpdeploy
+	post /deploy (HttpDeployReq) returns (Response)
+
+  @doc(
+		summary: 部署健康检查
+	)
+	@handler httpcheck
+	post /healthcheck (HttpCheckReq) returns (Response)
+}
