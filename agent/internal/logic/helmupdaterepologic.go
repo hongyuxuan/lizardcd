@@ -6,7 +6,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
-	"github.com/hongyuxuan/lizardcd/common/utils"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"helm.sh/helm/v3/pkg/repo"
@@ -18,15 +18,17 @@ type HelmUpdateRepoLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
-	helmUtil *utils.HelmUtil
+	helmService *commonsvc.HelmService
 }
 
 func NewHelmUpdateRepoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *HelmUpdateRepoLogic {
+	helmService := commonsvc.NewHelmService(ctx)
+	helmService.SetKubeconfig(svcCtx.Config.Kubeconfig)
 	return &HelmUpdateRepoLogic{
-		ctx:      ctx,
-		svcCtx:   svcCtx,
-		Logger:   logx.WithContext(ctx),
-		helmUtil: utils.NewHelmUtil(ctx),
+		ctx:         ctx,
+		svcCtx:      svcCtx,
+		Logger:      logx.WithContext(ctx),
+		helmService: helmService,
 	}
 }
 
@@ -35,7 +37,7 @@ func (l *HelmUpdateRepoLogic) HelmUpdateRepo(in *agent.HelmEntriesRequest) (*age
 	if err := json.Unmarshal(in.Entries, &entries); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := l.helmUtil.Update(entries); err != nil {
+	if err := l.helmService.Update(entries); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &agent.Response{

@@ -9,13 +9,17 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
 	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"github.com/hongyuxuan/lizardcd/common/utils"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -27,13 +31,15 @@ type VmDeployLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
+	vmService *commonsvc.VmService
 }
 
 func NewVmDeployLogic(ctx context.Context, svcCtx *svc.ServiceContext) *VmDeployLogic {
 	return &VmDeployLogic{
-		ctx:    ctx,
-		svcCtx: svcCtx,
-		Logger: logx.WithContext(ctx),
+		ctx:       ctx,
+		svcCtx:    svcCtx,
+		Logger:    logx.WithContext(ctx),
+		vmService: commonsvc.NewVmService(ctx),
 	}
 }
 
@@ -52,36 +58,60 @@ func (l *VmDeployLogic) VmDeploy(in *agent.VmDeployRequest) (resp *agent.Respons
 		if err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("Cannot find deploy user: %s", in.DeployUser))
 		}
+		l.Logger.Infof("Using user: %s to deploy", in.DeployUser)
 	}
 	uid, _ := strconv.Atoi(deployUser.Uid)
 	gid, _ := strconv.Atoi(deployUser.Gid)
 
 	// save pre_comamnd to shell scripts
 	if in.PreCommand != "" {
-		prefile := fmt.Sprintf("%s/tmp-pre-command-%d.sh", in.DeployPath, time.Now().UnixMicro())
+		var prefile string
+		if runtime.GOOS != "windows" {
+			prefile = fmt.Sprintf("%s/tmp-pre-command-%d.sh", in.DeployPath, time.Now().UnixMicro())
+		} else {
+			if in.CommandType == "ps1" {
+				prefile = fmt.Sprintf("%s/tmp-pre-command-%d.ps1", in.DeployPath, time.Now().UnixMicro())
+			} else {
+				prefile = fmt.Sprintf("%s/tmp-pre-command-%d.bat", in.DeployPath, time.Now().UnixMicro())
+			}
+		}
 		if err = os.WriteFile(prefile, []byte(in.PreCommand), 0755); err != nil {
 			l.Logger.Error(err)
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+		l.Logger.Infof("Saved pre_command script to: %s", prefile)
+		defer os.Remove(prefile)
+
 		// execute pre_command
 		var cmd *exec.Cmd
 		if currentUser.Name == "root" && in.DeployUser != "" { // only root chown, others not
 			os.Chown(prefile, uid, gid)
 			cmd = exec.Command("sudo", "-u", in.DeployUser, "-s", "/bin/bash", prefile)
 		} else {
-			cmd = exec.Command("/bin/bash", "-c", prefile)
+			if runtime.GOOS != "windows" {
+				cmd = exec.Command("/bin/bash", "-c", prefile)
+			} else {
+				if in.CommandType == "ps1" {
+					cmd = exec.Command("powershell", "-File", prefile)
+				} else {
+					cmd = exec.Command("cmd", "/c", prefile)
+				}
+			}
 		}
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		cmd.Stderr = &out
 		err = cmd.Run()
-		defer os.Remove(prefile)
+		utf8Output := out.Bytes()
+		if runtime.GOOS == "windows" {
+			utf8Output, _, _ = transform.Bytes(simplifiedchinese.GBK.NewDecoder(), out.Bytes())
+		}
 		if err != nil {
-			e := errorx.NewDefaultError("Failed to run pre_command: %v, output: %s", err, out.String())
+			e := errorx.NewDefaultError("Failed to run pre_command: %v, output: %s", err, string(utf8Output))
 			l.Logger.Error(e.Error())
 			return nil, status.Error(codes.Internal, e.Error())
 		}
-		l.Logger.Infof("Successfully run pre_command \"%s\", output: %s", in.PreCommand, out.String())
+		l.Logger.Infof("Successfully run pre_command, output: %s", string(utf8Output))
 	}
 
 	// download package
@@ -90,11 +120,12 @@ func (l *VmDeployLogic) VmDeploy(in *agent.VmDeployRequest) (resp *agent.Respons
 		l.Logger.Errorf("Failed to download package %s: %v", in.ArtifactUrl, err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to download package %s: %v", in.ArtifactUrl, err))
 	}
+	l.Logger.Infof("Successfully download package [%s] to %s", in.ArtifactUrl, in.DeployPath)
 
 	// unarchive package
 	if filepath.Ext(filename) != ".jar" {
 		err = utils.Unarchive(in.DeployPath+"/"+filename, in.DeployPath, uid, gid)
-		defer os.Remove(in.DeployPath + "/" + filename)
+		//defer os.Remove(in.DeployPath + "/" + filename)
 		if err != nil {
 			l.Logger.Error(err)
 			return nil, status.Error(codes.Internal, err.Error())
@@ -103,34 +134,56 @@ func (l *VmDeployLogic) VmDeploy(in *agent.VmDeployRequest) (resp *agent.Respons
 	}
 
 	// save start_comamnd to shell scripts
-	shellfile := fmt.Sprintf("%s/tmp-start-command-%d.sh", in.DeployPath, time.Now().UnixMicro())
-	if err = os.WriteFile(shellfile, []byte(in.StartCommand), 0755); err != nil {
+	var commandfile string
+	if runtime.GOOS != "windows" {
+		commandfile = fmt.Sprintf("%s/tmp-start-command-%d.sh", in.DeployPath, time.Now().UnixMicro())
+	} else {
+		if in.CommandType == "ps1" {
+			commandfile = fmt.Sprintf("%s/tmp-pre-command-%d.ps1", in.DeployPath, time.Now().UnixMicro())
+		} else {
+			commandfile = fmt.Sprintf("%s/tmp-pre-command-%d.bat", in.DeployPath, time.Now().UnixMicro())
+		}
+	}
+	if err = os.WriteFile(commandfile, []byte(in.StartCommand), 0755); err != nil {
 		l.Logger.Error(err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// execute start_command
+	l.Logger.Infof("Saved start_command script to: %s", commandfile)
 	var cmd *exec.Cmd
 	if currentUser.Name == "root" && in.DeployUser != "" { // only root chown, others not
-		os.Chown(shellfile, uid, gid)
-		cmd = exec.Command("sudo", "-u", in.DeployUser, "-s", "/bin/bash", shellfile)
+		os.Chown(commandfile, uid, gid)
+		cmd = exec.Command("sudo", "-u", in.DeployUser, "-s", "/bin/bash", commandfile)
 	} else {
-		cmd = exec.Command("/bin/bash", "-c", shellfile)
+		if runtime.GOOS != "windows" {
+			cmd = exec.Command("/bin/bash", "-c", commandfile)
+		} else {
+			if in.CommandType == "ps1" {
+				cmd = exec.Command("powershell", "-File", commandfile)
+			} else {
+				cmd = exec.Command("cmd", "/c", commandfile)
+			}
+		}
 	}
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	err = cmd.Run()
-	defer os.Remove(shellfile)
+	defer os.Remove(commandfile)
+	utf8Output := out.Bytes()
+	if runtime.GOOS == "windows" {
+		utf8Output, _, _ = transform.Bytes(simplifiedchinese.GBK.NewDecoder(), out.Bytes())
+	}
 	if err != nil {
-		e := errorx.NewDefaultError("Failed to run start_command: %v, output: %s", err, out.String())
+		e := errorx.NewDefaultError("Failed to run start_command: %v, output: %s", err, string(utf8Output))
 		l.Logger.Error(e.Error())
 		return nil, status.Error(codes.Internal, e.Error())
 	}
-	l.Logger.Infof("Successfully run start_command \"%s\", output: %s", in.StartCommand, out.String())
+	l.Logger.Infof("Successfully run start_command, output: %s", string(utf8Output))
 	resp = &agent.Response{
 		Code: uint32(codes.OK),
-		Data: out.Bytes(),
+		Data: utf8Output,
 	}
 	return
 }

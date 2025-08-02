@@ -23,44 +23,39 @@ func NewLizardAgentServer(svcCtx *svc.ServiceContext) *LizardAgentServer {
 }
 
 // kubernetes
-func (s *LizardAgentServer) PatchDeployment(ctx context.Context, in *agent.PatchWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewPatchDeploymentLogic(ctx, s.svcCtx)
-	return l.PatchDeployment(in)
+func (s *LizardAgentServer) GetNamespaces(ctx context.Context, in *agent.LabelSelector) (*agent.Response, error) {
+	l := logic.NewGetNamespacesLogic(ctx, s.svcCtx)
+	return l.GetNamespaces(in)
 }
 
-func (s *LizardAgentServer) PatchStatefulset(ctx context.Context, in *agent.PatchWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewPatchStatefulsetLogic(ctx, s.svcCtx)
-	return l.PatchStatefulset(in)
+func (s *LizardAgentServer) ListResource(ctx context.Context, in *agent.ListResourceRequest) (*agent.Response, error) {
+	l := logic.NewListResourceLogic(ctx, s.svcCtx)
+	return l.ListResource(in)
 }
 
-func (s *LizardAgentServer) ListDeployment(ctx context.Context, in *agent.ListResourceRequest) (*agent.Response, error) {
-	l := logic.NewListDeploymentLogic(ctx, s.svcCtx)
-	return l.ListDeployment(in)
+func (s *LizardAgentServer) GetResource(ctx context.Context, in *agent.GetResourceRequest) (*agent.Response, error) {
+	l := logic.NewGetResourceLogic(ctx, s.svcCtx)
+	return l.GetResource(in)
 }
 
-func (s *LizardAgentServer) ListStatefulset(ctx context.Context, in *agent.ListResourceRequest) (*agent.Response, error) {
-	l := logic.NewListStatefulsetLogic(ctx, s.svcCtx)
-	return l.ListStatefulset(in)
+func (s *LizardAgentServer) DeleteResource(ctx context.Context, in *agent.DeleteResourceRequest) (*agent.Response, error) {
+	l := logic.NewDeleteResourceLogic(ctx, s.svcCtx)
+	return l.DeleteResource(in)
 }
 
-func (s *LizardAgentServer) DeleteDeployment(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewDeleteDeploymentLogic(ctx, s.svcCtx)
-	return l.DeleteDeployment(in)
+func (s *LizardAgentServer) PatchWorkload(ctx context.Context, in *agent.PatchWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewPatchWorkloadLogic(ctx, s.svcCtx)
+	return l.PatchWorkload(in)
 }
 
-func (s *LizardAgentServer) DeleteStatefulset(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewDeleteStatefulsetLogic(ctx, s.svcCtx)
-	return l.DeleteStatefulset(in)
+func (s *LizardAgentServer) RolloutWorkload(ctx context.Context, in *agent.PatchWorkloadRequest) (*agent.Response, error) {
+	l := logic.NewRolloutWorkloadLogic(ctx, s.svcCtx)
+	return l.RolloutWorkload(in)
 }
 
-func (s *LizardAgentServer) GetDeploymentPod(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewGetDeploymentPodLogic(ctx, s.svcCtx)
-	return l.GetDeploymentPod(in)
-}
-
-func (s *LizardAgentServer) GetStatefulsetPod(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewGetStatefulsetPodLogic(ctx, s.svcCtx)
-	return l.GetStatefulsetPod(in)
+func (s *LizardAgentServer) ScaleWorkload(ctx context.Context, in *agent.ScaleRequest) (*agent.Response, error) {
+	l := logic.NewScaleWorkloadLogic(ctx, s.svcCtx)
+	return l.ScaleWorkload(in)
 }
 
 func (s *LizardAgentServer) GetEvent(ctx context.Context, in *agent.GetEventRequest) (*agent.Response, error) {
@@ -68,9 +63,9 @@ func (s *LizardAgentServer) GetEvent(ctx context.Context, in *agent.GetEventRequ
 	return l.GetEvent(in)
 }
 
-func (s *LizardAgentServer) GetPodStatus(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewGetPodStatusLogic(ctx, s.svcCtx)
-	return l.GetPodStatus(in)
+func (s *LizardAgentServer) GetResourceStatus(ctx context.Context, in *agent.GetResourceRequest) (*agent.Response, error) {
+	l := logic.NewGetResourceStatusLogic(ctx, s.svcCtx)
+	return l.GetResourceStatus(in)
 }
 
 func (s *LizardAgentServer) DeleteYaml(ctx context.Context, in *agent.YamlRequest) (*agent.Response, error) {
@@ -83,64 +78,29 @@ func (s *LizardAgentServer) ApplyYaml(ctx context.Context, in *agent.YamlRequest
 	return l.ApplyYaml(in)
 }
 
-func (s *LizardAgentServer) Getyaml(ctx context.Context, in *agent.GetYamlRequest) (*agent.YamlResponse, error) {
-	l := logic.NewGetyamlLogic(ctx, s.svcCtx)
-	return l.Getyaml(in)
+func (s *LizardAgentServer) GetYaml(ctx context.Context, in *agent.GetYamlRequest) (*agent.YamlResponse, error) {
+	l := logic.NewGetYamlLogic(ctx, s.svcCtx)
+	return l.GetYaml(in)
 }
 
-func (s *LizardAgentServer) RolloutDeployment(ctx context.Context, in *agent.RolloutWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewRolloutDeploymentLogic(ctx, s.svcCtx)
-	return l.RolloutDeployment(in)
+func (s *LizardAgentServer) GetWorkloadPod(ctx context.Context, in *agent.GetResourceRequest) (*agent.Response, error) {
+	l := logic.NewGetWorkloadPodLogic(ctx, s.svcCtx)
+	return l.GetWorkloadPod(in)
 }
 
-func (s *LizardAgentServer) RolloutStatefulset(ctx context.Context, in *agent.RolloutWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewRolloutStatefulsetLogic(ctx, s.svcCtx)
-	return l.RolloutStatefulset(in)
+func (s *LizardAgentServer) GetWorkloadReplicas(ctx context.Context, in *agent.ReplicaRequest) (*agent.Response, error) {
+	l := logic.NewGetWorkloadReplicasLogic(ctx, s.svcCtx)
+	return l.GetWorkloadReplicas(in)
 }
 
-func (s *LizardAgentServer) ScaleDeployment(ctx context.Context, in *agent.ScaleRequest) (*agent.Response, error) {
-	l := logic.NewScaleDeploymentLogic(ctx, s.svcCtx)
-	return l.ScaleDeployment(in)
+func (s *LizardAgentServer) GetWorkloadImages(ctx context.Context, in *agent.ReplicaRequest) (*agent.Response, error) {
+	l := logic.NewGetWorkloadImagesLogic(ctx, s.svcCtx)
+	return l.GetWorkloadImages(in)
 }
 
-func (s *LizardAgentServer) ScaleStatefulset(ctx context.Context, in *agent.ScaleRequest) (*agent.Response, error) {
-	l := logic.NewScaleStatefulsetLogic(ctx, s.svcCtx)
-	return l.ScaleStatefulset(in)
-}
-
-func (s *LizardAgentServer) GetDeploymentReplicas(ctx context.Context, in *agent.ReplicaRequest) (*agent.Response, error) {
-	l := logic.NewGetDeploymentReplicasLogic(ctx, s.svcCtx)
-	return l.GetDeploymentReplicas(in)
-}
-
-func (s *LizardAgentServer) GetDeploymentImages(ctx context.Context, in *agent.ReplicaRequest) (*agent.Response, error) {
-	l := logic.NewGetDeploymentImagesLogic(ctx, s.svcCtx)
-	return l.GetDeploymentImages(in)
-}
-
-func (s *LizardAgentServer) GetNamespaces(ctx context.Context, in *agent.LabelSelector) (*agent.Response, error) {
-	l := logic.NewGetNamespacesLogic(ctx, s.svcCtx)
-	return l.GetNamespaces(in)
-}
-
-func (s *LizardAgentServer) GetDeployment(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewGetDeploymentLogic(ctx, s.svcCtx)
-	return l.GetDeployment(in)
-}
-
-func (s *LizardAgentServer) GetStatefulset(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewGetStatefulsetLogic(ctx, s.svcCtx)
-	return l.GetStatefulset(in)
-}
-
-func (s *LizardAgentServer) GetDeploymentQuota(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewGetDeploymentQuotaLogic(ctx, s.svcCtx)
-	return l.GetDeploymentQuota(in)
-}
-
-func (s *LizardAgentServer) GetStatefulsetQuota(ctx context.Context, in *agent.GetWorkloadRequest) (*agent.Response, error) {
-	l := logic.NewGetStatefulsetQuotaLogic(ctx, s.svcCtx)
-	return l.GetStatefulsetQuota(in)
+func (s *LizardAgentServer) GetWorkloadQuota(ctx context.Context, in *agent.GetResourceRequest) (*agent.Response, error) {
+	l := logic.NewGetWorkloadQuotaLogic(ctx, s.svcCtx)
+	return l.GetWorkloadQuota(in)
 }
 
 func (s *LizardAgentServer) GetPodLog(ctx context.Context, in *agent.PodLogRequest) (*agent.YamlResponse, error) {
@@ -158,9 +118,19 @@ func (s *LizardAgentServer) SetPodHorizonAutoscaler(ctx context.Context, in *age
 	return l.SetPodHorizonAutoscaler(in)
 }
 
-func (s *LizardAgentServer) GetPodHorizonAutoscaler(ctx context.Context, in *agent.RolloutWorkloadRequest) (*agent.Response, error) {
+func (s *LizardAgentServer) GetPodHorizonAutoscaler(ctx context.Context, in *agent.PatchWorkloadRequest) (*agent.Response, error) {
 	l := logic.NewGetPodHorizonAutoscalerLogic(ctx, s.svcCtx)
 	return l.GetPodHorizonAutoscaler(in)
+}
+
+func (s *LizardAgentServer) RunCommandInPod(stream agent.LizardAgent_RunCommandInPodServer) error {
+	l := logic.NewRunCommandInPodLogic(stream.Context(), s.svcCtx)
+	return l.RunCommandInPod(stream)
+}
+
+func (s *LizardAgentServer) PatchConfigmap(ctx context.Context, in *agent.PatchConfigmapRequest) (*agent.Response, error) {
+	l := logic.NewPatchConfigmapLogic(ctx, s.svcCtx)
+	return l.PatchConfigmap(in)
 }
 
 // istio
@@ -245,6 +215,11 @@ func (s *LizardAgentServer) GetTektonResource(ctx context.Context, in *agent.Tek
 	return l.GetTektonResource(in)
 }
 
+func (s *LizardAgentServer) PatchTektonResource(ctx context.Context, in *agent.TektonPatchRequest) (*agent.Response, error) {
+	l := logic.NewPatchTektonResourceLogic(ctx, s.svcCtx)
+	return l.PatchTektonResource(in)
+}
+
 func (s *LizardAgentServer) GetTektonYaml(ctx context.Context, in *agent.TektonYamlRequest) (*agent.YamlResponse, error) {
 	l := logic.NewGetTektonYamlLogic(ctx, s.svcCtx)
 	return l.GetTektonYaml(in)
@@ -315,4 +290,25 @@ func (s *LizardAgentServer) VmDeploy(ctx context.Context, in *agent.VmDeployRequ
 func (s *LizardAgentServer) VmHealthCheck(ctx context.Context, in *agent.VmHealthCheckRequest) (*agent.Response, error) {
 	l := logic.NewVmHealthCheckLogic(ctx, s.svcCtx)
 	return l.VmHealthCheck(in)
+}
+
+func (s *LizardAgentServer) RunCommand(in *agent.RunCommandRequest, stream agent.LizardAgent_RunCommandServer) error {
+	l := logic.NewRunCommandLogic(stream.Context(), s.svcCtx)
+	return l.RunCommand(in, stream)
+}
+
+func (s *LizardAgentServer) DownloadFile(in *agent.FileRequest, stream agent.LizardAgent_DownloadFileServer) error {
+	l := logic.NewDownloadFileLogic(stream.Context(), s.svcCtx)
+	return l.DownloadFile(in, stream)
+}
+
+// docker deploy
+func (s *LizardAgentServer) DockerDeploy(ctx context.Context, in *agent.DockerDeployRequest) (*agent.Response, error) {
+	l := logic.NewDockerDeployLogic(ctx, s.svcCtx)
+	return l.DockerDeploy(in)
+}
+
+func (s *LizardAgentServer) DockerCheck(ctx context.Context, in *agent.DockerDeployRequest) (*agent.Response, error) {
+	l := logic.NewDockerCheckLogic(ctx, s.svcCtx)
+	return l.DockerCheck(in)
 }

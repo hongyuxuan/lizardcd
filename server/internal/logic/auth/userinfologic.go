@@ -28,7 +28,7 @@ func NewUserinfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Userinfo
 func (l *UserinfoLogic) Userinfo() (resp *types.Response, err error) {
 	payloads := l.ctx.Value("payloads").(map[string]interface{})
 	var user commontypes.User
-	if err = l.svcCtx.Sqlite.Model(&commontypes.User{}).Where("username = ?", payloads["username"]).First(&user).Error; err != nil {
+	if err = l.svcCtx.Database.Model(&commontypes.User{}).Where("username = ?", payloads["username"]).First(&user).Error; err != nil {
 		l.Logger.Error(err)
 		return
 	}

@@ -9,7 +9,7 @@
     <div class="flex-grow" />
     <el-menu-item index="1">
       <div>
-        <el-avatar :size="45" :src="avator" style="vertical-align:middle" />
+        <el-avatar :size="40" :src="avatar" style="vertical-align:middle" />
         <span style="margin-left:15px">{{username}}</span>
       </div>
     </el-menu-item>
@@ -55,11 +55,14 @@ import { axios } from '/src/assets/util/axios'
 /* 变量定义 */
 const router = useRouter()
 const store = useStore()
-const avator = computed(() => {
-  return store.state.avatar || "/images/avator.png"
+const avatar = computed(() => {
+  return store.state.userInfo.profile?.avatar || "/images/avator.png"
 })
 const username = computed(() => {
-  return store.state.username
+  return store.state.userInfo.username
+})
+const tenant = computed(() => {
+  return localStorage.tenant
 })
 const show = ref({
   modify: false
@@ -78,6 +81,7 @@ const refModify = ref(null)
 /* methods */
 const handleSelect = (index) => {
   switch(index) {
+    case '1': router.push('/profile');break
     case '2': window.open('/swagger/', '_blank');break
     case '3-1': router.push('/platform/settings');break
     case '3-2': show.value.modify = true;break

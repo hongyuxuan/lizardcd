@@ -2,13 +2,12 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -17,68 +16,24 @@ type ListTektonResourceLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
+	K8sService *commonsvc.K8sService
 }
 
 func NewListTektonResourceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListTektonResourceLogic {
 	return &ListTektonResourceLogic{
-		ctx:    ctx,
-		svcCtx: svcCtx,
-		Logger: logx.WithContext(ctx),
+		ctx:        ctx,
+		svcCtx:     svcCtx,
+		Logger:     logx.WithContext(ctx),
+		K8sService: commonsvc.NewK8sService(ctx, svcCtx.Clientset, svcCtx.Dynamicclient, svcCtx.TektonClient, svcCtx.TriggerClient),
 	}
 }
 
 // tekton
 func (l *ListTektonResourceLogic) ListTektonResource(in *agent.TektonListRequest) (*agent.Response, error) {
-	var data []byte
-	switch in.ResourceType {
-	case "tasks":
-		res, err := l.svcCtx.TektonClient.Task(in.Namespace).List(l.ctx, metav1.ListOptions{
-			LabelSelector: in.LabelSelector,
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "pipelines":
-		res, err := l.svcCtx.TektonClient.Pipeline(in.Namespace).List(l.ctx, metav1.ListOptions{
-			LabelSelector: in.LabelSelector,
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "pipelineruns":
-		res, err := l.svcCtx.TektonClient.PipelineRun(in.Namespace).List(l.ctx, metav1.ListOptions{
-			LabelSelector: in.LabelSelector,
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "triggerbindings":
-		res, err := l.svcCtx.TektonClient.TriggerBinding(in.Namespace).List(l.ctx, metav1.ListOptions{
-			LabelSelector: in.LabelSelector,
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "triggertemplates":
-		res, err := l.svcCtx.TektonClient.TriggerTemplate(in.Namespace).List(l.ctx, metav1.ListOptions{
-			LabelSelector: in.LabelSelector,
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "eventlisteners":
-		res, err := l.svcCtx.TektonClient.EventListener(in.Namespace).List(l.ctx, metav1.ListOptions{
-			LabelSelector: in.LabelSelector,
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
+	data, err := l.K8sService.TektonService.ListResource(in.Namespace, in.ResourceType, in.LabelSelector, in.FieldSelector, in.Continue, in.Limit)
+	if err != nil {
+		l.Logger.Error(err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &agent.Response{
 		Code: uint32(codes.OK),

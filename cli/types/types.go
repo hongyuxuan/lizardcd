@@ -2,6 +2,7 @@ package types
 
 import (
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -14,13 +15,19 @@ type LizardAgentRes struct {
 }
 
 type DeploymentRes struct {
-	Code int             `json:"code"`
-	Data []v1.Deployment `json:"data"`
+	Code int `json:"code"`
+	Data struct {
+		Continue string          `json:"continue"`
+		Results  []v1.Deployment `json:"results"`
+	}
 }
 
 type StatefulsetRes struct {
-	Code int              `json:"code"`
-	Data []v1.StatefulSet `json:"data"`
+	Code int `json:"code"`
+	Data struct {
+		Continue string           `json:"continue"`
+		Results  []v1.StatefulSet `json:"results"`
+	}
 }
 
 type PodRes struct {
@@ -87,4 +94,18 @@ type TaskExecuteRes struct {
 		Id string `json:"id"`
 	} `json:"data"`
 	Message string `json:"message"`
+}
+
+type TektonPipelineRes struct {
+	Code    int               `json:"code"`
+	Message string            `json:"message"`
+	Data    tektonv1.Pipeline `json:"data"`
+}
+
+type TemplateRes struct {
+	Code int `json:"code"`
+	Data struct {
+		Results []commontypes.YamlTemplate `json:"results"`
+		Total   int64                      `json:"total"`
+	} `json:"data"`
 }

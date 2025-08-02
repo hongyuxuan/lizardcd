@@ -2,10 +2,10 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -16,55 +16,23 @@ type GetTektonResourceLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
+	K8sService *commonsvc.K8sService
 }
 
 func NewGetTektonResourceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetTektonResourceLogic {
 	return &GetTektonResourceLogic{
-		ctx:    ctx,
-		svcCtx: svcCtx,
-		Logger: logx.WithContext(ctx),
+		ctx:        ctx,
+		svcCtx:     svcCtx,
+		Logger:     logx.WithContext(ctx),
+		K8sService: commonsvc.NewK8sService(ctx, svcCtx.Clientset, svcCtx.Dynamicclient, svcCtx.TektonClient, svcCtx.TriggerClient),
 	}
 }
 
 func (l *GetTektonResourceLogic) GetTektonResource(in *agent.TektonYamlRequest) (*agent.Response, error) {
-	var data []byte
-	switch in.ResourceType {
-	case "tasks":
-		res, err := l.svcCtx.TektonClient.Task(in.Namespace).Get(l.ctx, in.ResourceName)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "pipelines":
-		res, err := l.svcCtx.TektonClient.Pipeline(in.Namespace).Get(l.ctx, in.ResourceName)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "pipelineruns":
-		res, err := l.svcCtx.TektonClient.PipelineRun(in.Namespace).Get(l.ctx, in.ResourceName)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "triggerbindings":
-		res, err := l.svcCtx.TektonClient.TriggerBinding(in.Namespace).Get(l.ctx, in.ResourceName)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "triggertemplates":
-		res, err := l.svcCtx.TektonClient.TriggerTemplate(in.Namespace).Get(l.ctx, in.ResourceName)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
-	case "eventlisteners":
-		res, err := l.svcCtx.TektonClient.EventListener(in.Namespace).Get(l.ctx, in.ResourceName)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		data, _ = json.Marshal(res)
+	data, err := l.K8sService.TektonService.GetResource(in.Namespace, in.ResourceType, in.ResourceName)
+	if err != nil {
+		l.Logger.Error(err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &agent.Response{
 		Code: uint32(codes.OK),

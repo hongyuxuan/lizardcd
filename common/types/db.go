@@ -19,18 +19,20 @@ type YamlTemplate struct {
 
 type User struct {
 	Id       int       `json:"id" gorm:"primaryKey,autoIncrement"`
-	Username string    `json:"username" gorm:"size:50;unique"`
-	Password string    `json:",omitempty" gorm:"size:100"`
+	Userid   string    `json:"userid" gorm:"size:50;unique"`
+	Username string    `json:"username" gorm:"size:50"`
+	Password string    `json:"password,omitempty" gorm:"size:100"`
+	Email    string    `json:"email,omitempty" gorm:"size:100"`
 	Role     string    `json:"role" gorm:"size:50"`
 	Tenant   string    `json:"tenant" gorm:"size:50"`
-	Profile  StringMap `json:"profile" gorm:"type:json"`
+	Profile  StringMap `json:"profile,omitempty" gorm:"type:json"`
 	UpdateAt time.Time `json:"update_at"`
 }
 
 type Tenant struct {
 	Id         int       `json:"id" gorm:"primaryKey,autoIncrement"`
 	TenantName string    `json:"tenant_name" gorm:"size:50;unique"`
-	Namespaces string    `json:"namespaces"`
+	Namespaces string    `json:"namespaces" gorm:"type:json"`
 	UpdateAt   time.Time `json:"update_at"`
 }
 
@@ -48,7 +50,12 @@ func (r ImageRepository) Value() (driver.Value, error) {
 }
 
 func (r *ImageRepository) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &r)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &r)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &r)
+	}
 }
 
 type Application struct {
@@ -64,32 +71,33 @@ type Application struct {
 	TrafficPolicy        string                `json:"traffic_policy"`
 	Tenant               string                `json:"tenant" gorm:"size:50"`
 	Tags                 StringList            `json:"tags" gorm:"type:json"`
-	ExtraVars            string                `json:"extra_vars" gorm:"type:json"`
-	TemplateId           int                   `json:"template_id,omitempty"`
-	EnableBuild          bool                  `json:"enable_build"`
-	BuildScript          string                `json:"build_script,omitempty"`
-	VersionScript        string                `json:"version_script,omitempty"`
+	ExtraVars            *string               `json:"extra_vars,omitempty" gorm:"type:json"`
+	AutoBuild            *AutoBuild            `json:"auto_build,omitempty" gorm:"type:json"`
 	GitOps               *GitOps               `json:"gitops,omitempty" gorm:"type:json"`
-	UpdateAt             time.Time             `json:"update_at"`
-	Template             *YamlTemplate         `json:"template,omitempty" gorm:"foreignKey:TemplateId;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 	Faas                 *ApplicationFaas      `json:"faas,omitempty" gorm:"foreignKey:ApplicationId;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 	Resource             []ApplicationResource `json:"resource,omitempty" gorm:"foreignKey:ApplicationId;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	Timeout              int                   `json:"timeout"`
+	UpdateAt             time.Time             `json:"update_at"`
+}
+type ApplicationNew struct {
+	Application
 }
 
 type ApplicationList []Application
 
 type Workload struct {
-	Cluster       string        `json:"cluster,omitempty"`
-	Namespace     string        `json:"namespace,omitempty"`
-	WorkloadName  string        `json:"workload_name"`
-	ContainerName string        `json:"container_name,omitempty"`
+	Cluster       string        `json:"cluster,optional,omitempty"`
+	Namespace     string        `json:"namespace,optional,omitempty"`
 	WorkloadType  string        `json:"workload_type,optional,omitempty"`
+	WorkloadName  string        `json:"workload_name,optional,omitempty"`
+	ContainerName string        `json:"container_name,optional,omitempty"`
+	DeployType    string        `json:"deploy_type,optional,omitempty"`
 	Version       string        `json:"version,optional,omitempty"`
 	Weight        int           `json:"weight,optional,omitempty"`
 	Headers       []MatchHeader `json:"headers,optional,omitempty"`
 	ArtifactUrl   string        `json:"artifact_url,optional,omitempty"`
-	// Revision      string        `json:"revision,optional,omitempty"`
-	Enable bool `json:"enable"`
+	Labels        StringList    `json:"labels,optional,omitempty"`
+	Enable        bool          `json:"enable,optional,omitempty"`
 }
 
 func (w Workload) Value() (driver.Value, error) {
@@ -98,7 +106,12 @@ func (w Workload) Value() (driver.Value, error) {
 }
 
 func (w *Workload) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &w)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &w)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &w)
+	}
 }
 
 type WorkloadList []Workload
@@ -108,7 +121,33 @@ func (w WorkloadList) Value() (driver.Value, error) {
 	return string(b), err
 }
 func (w *WorkloadList) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &w)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &w)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &w)
+	}
+}
+
+type AutoBuild struct {
+	Enable        bool   `json:"enable"`
+	TemplateId    int    `json:"template_id,omitempty"`
+	BuildScript   string `json:"build_script,omitempty"`
+	VersionScript string `json:"version_script,omitempty"`
+}
+
+func (a AutoBuild) Value() (driver.Value, error) {
+	b, err := json.Marshal(a)
+	return string(b), err
+}
+
+func (a *AutoBuild) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &a)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &a)
+	}
 }
 
 type GitOps struct {
@@ -132,7 +171,12 @@ func (g GitOps) Value() (driver.Value, error) {
 }
 
 func (g *GitOps) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &g)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &g)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &g)
+	}
 }
 
 type ApplicationResource struct {
@@ -174,12 +218,17 @@ func (f FaasVersionList) Value() (driver.Value, error) {
 }
 
 func (f *FaasVersionList) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &f)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &f)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &f)
+	}
 }
 
 type Settings struct {
 	Id           int    `json:"id" gorm:"primaryKey;autoIncrement"`
-	SettingKey   string `json:"setting_key" gorm:"uniqueIndex:idx_key"`
+	SettingKey   string `json:"setting_key" gorm:"size:100;uniqueIndex:idx_key"`
 	SettingValue string `json:"setting_value"`
 	Tenant       string `json:"tenant" gorm:"size:50;uniqueIndex:idx_key"`
 }
@@ -202,26 +251,29 @@ type TaskHistory struct {
 }
 
 type TaskHistoryWorkload struct {
-	Id            int       `json:"id" gorm:"primaryKey;autoIncrement"`
-	Workload      Workload  `json:"workload" gorm:"type:json"`
-	Status        string    `json:"status" gorm:"type:json"`
-	ErrMessage    string    `json:"err_message"`
-	TaskHistoryId string    `json:"task_history_id" gorm:"size:100"`
-	UpdateAt      time.Time `json:"update_at"`
+	Id            int          `json:"id" gorm:"primaryKey;autoIncrement"`
+	Workload      Workload     `json:"workload" gorm:"type:json"`
+	Success       sql.NullBool `json:"success"`
+	Status        string       `json:"status"`
+	ErrMessage    string       `json:"err_message"`
+	TaskHistoryId string       `json:"task_history_id" gorm:"size:100"`
+	UpdateAt      time.Time    `json:"update_at"`
 }
 
 type Oauth2 struct {
 	Id             int    `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name           string `json:"name" gorm:"size:50"`
-	ClientId       string `json:"client_id" gorm:"size:50"`
-	ClientSecret   string `json:"client_secret" gorm:"size:50"`
+	ClientId       string `json:"client_id" gorm:"size:300"`
+	ClientSecret   string `json:"client_secret" gorm:"size:300"`
 	AuthorizeUrl   string `json:"authorized_url"`
 	RedirectUrl    string `json:"redirect_url"`
 	TokenUrl       string `json:"token_url"`
 	UserinfoUrl    string `json:"userinfo_url"`
 	CallbackUrl    string `json:"callback_url"`
+	IdJsonpath     string `json:"id_jsonpath"`
 	UserJsonpath   string `json:"user_jsonpath"`
 	AvatarJsonpath string `json:"avatar_jsonpath"`
+	EmailJsonpath  string `json:"email_jsonpath"`
 	HttpProxy      string `json:"http_proxy"`
 }
 
@@ -233,4 +285,13 @@ type Tokens struct {
 	JwtToken string    `json:"jwt_token"`
 	CreateAt time.Time `json:"create_at"`
 	ExpireAt time.Time `json:"expire_at"`
+}
+
+type Agent struct {
+	Id         int        `json:"id" gorm:"primaryKey;autoIncrement"`
+	ServiceKey string     `json:"service_key" gorm:"size:300,unique"`
+	Endpoint   string     `json:"endpoint" gorm:"size:100"`
+	Kubeconfig string     `json:"kubeconfig"`
+	Proxy      string     `json:"proxy,omitempty" gorm:"size:100"`
+	Labels     StringList `json:"labels" gorm:"type:json"`
 }

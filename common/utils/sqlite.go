@@ -10,16 +10,12 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/hongyuxuan/lizardcd/common/constant"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
-	"github.com/zeromicro/go-zero/core/logx"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 	"gorm.io/gorm/utils"
 )
-
-var tracer = otel.Tracer("gorm/sqlite")
 
 type SQLite struct {
 	*gorm.DB
@@ -45,10 +41,9 @@ func NewSQLite(dbfile, level string) *gorm.DB {
 		},
 	})
 	if err != nil {
-		logx.Errorf("Failed to connect sqlite: %v", err)
-		os.Exit(0)
+		Log.Fatalf("Failed to connect sqlite: %v", err)
 	}
-	logx.Infof("Open sqlite file %s success", dbfile)
+	Log.Infof("Open sqlite file %s success", dbfile)
 
 	// callback
 	sqlite.Callback().Create().Before("gorm:before_create").Register("callback_before", tracingBefore)
@@ -115,7 +110,10 @@ func SetTx(tx *gorm.DB, req *commontypes.GetDataReq, count *int64, role string, 
 			if strings.Contains(filter, " in ") {
 				filterStmt := strings.Split(filter, " in ")
 				tx.Where(fmt.Sprintf("%s in ?", filterStmt[0]), strings.Split(filterStmt[1], "|"))
-			} else {
+			} else if strings.Contains(filter, "!=") {
+				filterStmt := strings.Split(filter, "!=")
+				tx.Where(fmt.Sprintf("%s != ?", filterStmt[0]), filterStmt[1])
+			} else if strings.Contains(filter, "==") {
 				filterStmt := strings.Split(filter, "==")
 				tx.Where(fmt.Sprintf("%s = ?", filterStmt[0]), filterStmt[1])
 			}

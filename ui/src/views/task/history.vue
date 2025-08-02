@@ -10,10 +10,10 @@
     </div>
   </template>
   <el-row>
-    <el-col :span="16">
+    <el-col :span="14">
       <el-button-group style="width:100%">
-        <el-button :icon="Refresh" size="large" style="margin-right:5px" @click="getList(current)" />
-        <el-input v-model="searchKey" clearable placeholder="输入关键词查询……" @change="getList(1);current=1" style="width:30%;margin-right:5px" size="large">
+        <el-button :icon="Refresh" size="large" @click="getList(current)" />
+        <el-input v-model="searchKey" clearable placeholder="输入关键词查询……" @change="getList(1);current=1" style="width:30%;" size="large">
           <template #prepend>
             <el-select v-model="searchField" placeholder="选择字段" style="width: 115px" size="large">
               <el-option label="应用名" value="app_name" />
@@ -37,31 +37,43 @@
         </el-select>
       </el-button-group>
     </el-col>
-    <el-col :span="8">
-      <el-dropdown @command="handleMore" class="pull-right">
-        <el-button size="large">更多操作<el-icon class="el-icon--right"><arrow-down /></el-icon></el-button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item :command="{action:'deleteBatch'}">批量删除</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-      <el-date-picker
-          style="float:right;margin-right:5px;"
-          v-model="timerange"
-          type="datetimerange"
-          :shortcuts="shortcuts"
-          range-separator="To"
-          start-placeholder="开始时间"
-          end-placeholder="结束时间"
+    <el-col :span="10">
+      <el-button-group class="pull-right">
+        <el-date-picker
+            style="width:300px"
+            v-model="timerange"
+            type="datetimerange"
+            :shortcuts="shortcuts"
+            range-separator="To"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            size="large"
+            @change="getList(1);current=1" />
+        <el-select
+          style="width:180px;"
+          v-model="columns"
+          multiple
           size="large"
-          @change="getList(1);current=1" />
+          collapse-tags
+          value-key="name"
+          class="span3"
+          placeholder="显示/隐藏列">
+          <el-option v-for="item in fields" :key="item.name" :label="item.label" :value="item"></el-option>
+        </el-select>
+        <el-dropdown @command="handleMore">
+          <el-button size="large">更多操作<el-icon class="el-icon--right"><arrow-down /></el-icon></el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="{action:'deleteBatch'}">批量删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </el-button-group>
     </el-col>
   </el-row>
   <el-table 
     :data="list" 
     v-loading="loading.table"
-    @expand-change="getTaskHistoryWorkload"
     @filter-change="filterTable"
     @sort-change="sortTable"
     @selection-change="select"
@@ -69,43 +81,14 @@
     class="line-height40" 
     style="width:100%;margin-top:10px">
     <el-table-column type="selection" width="40" />
-    <el-table-column type="expand" width="40">
+    <el-table-column prop="app_name" label="应用名称" v-if="ifShow('app_name')" min-width="180">
       <template #default="scope">
-        <el-table :data="taskHistoryWorkload[scope.row.id]" style="margin-left:80px;" :cell-style="{'line-height':'23px'}">
-          <el-table-column prop="workload.cluster" label="集群" width="110px" />
-          <el-table-column prop="workload.namespace" label="命名空间" width="130px" />
-          <el-table-column prop="workload.workload_type" label="负载/目标类型" width="120px"></el-table-column>
-          <el-table-column prop="workload.workload_name" label="负载/目标名称" min-width="150px">
-            <template #default="props">
-              <el-link :href="`/workload/${props.row.workload.workload_type}/${props.row.workload.workload_name}?cluster=${props.row.workload.cluster}&namespace=${props.row.workload.namespace}`" type="primary" :underline="false" target="_blank">{{ props.row.workload.workload_name }}</el-link>
-            </template>
-          </el-table-column>
-          <el-table-column prop="workload.container_name" label="容器名称" min-width="150px" />
-          <el-table-column prop="workload.artifact_url" label="镜像/制品" min-width="200px" />
-          <el-table-column prop="status" label="状态" min-width="300px">
-            <template #default="props">
-              <div v-for="(item,i) in props.row.status" :key="i" style="line-height:20px;">{{ item }}</div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="err_message" label="输出信息" min-width="180px">
-            <template #default="props"><span class="text-red">{{ props.row.err_message }}</span></template>
-          </el-table-column>
-          <el-table-column prop="init_at" label="更新时间" width="160">
-            <template #default="props">
-              {{ moment(props.row.update_at).format('YYYY-MM-DD HH:mm') }}
-            </template>
-          </el-table-column>
-        </el-table>
+        <el-link underline="never" :href="`/task/history/${scope.row.id}`">{{ scope.row.app_name }}</el-link>
       </template>
     </el-table-column>
-    <el-table-column prop="app_name" label="应用名称" min-width="150">
-      <template #default="scope">
-        <el-link :underline="false" :href="`/application?app_name=${encodeURIComponent(scope.row.app_name)}`" target="_blank">{{ scope.row.app_name }}</el-link>
-      </template>
-    </el-table-column>
-    <el-table-column prop="task_type" label="任务类型" :filters="taskTypeFilters" column-key="task_type" :filter-multiple="false" width="120" />
-    <el-table-column prop="trigger_type" label="触发类型" width="120" />
-    <el-table-column label="执行结果" :filters="successFilters" column-key="success" :filter-multiple="false" width="120">
+    <el-table-column prop="task_type" label="任务类型" v-if="ifShow('task_type')" :filters="taskTypeFilters" column-key="task_type" :filter-multiple="false" width="120" />
+    <el-table-column prop="trigger_type" label="触发类型" v-if="ifShow('trigger_type')" width="120" />
+    <el-table-column prop="result" label="执行结果" v-if="ifShow('result')" :filters="successFilters" column-key="success" :filter-multiple="false" width="120">
       <template #default="scope">
         <span v-if="scope.row.status==='waiting'" style="color:#5cb87a" />
         <span v-else-if="scope.row.success.Bool===true&&scope.row.success.Valid===true" style="color:#5cb87a">
@@ -119,7 +102,7 @@
         </span>
       </template>
     </el-table-column>
-    <el-table-column label="状态" :filters="statusFilters" column-key="status" :filter-multiple="false" width="150">
+    <el-table-column prop="status" label="状态" v-if="ifShow('status')" :filters="statusFilters" column-key="status" :filter-multiple="false" width="150">
       <template #default="scope">
         <el-tooltip effect="dark" placement="top" :content="scope.row.err_message||scope.row.status">
           <el-progress v-if="['initialize','waiting','terminated'].includes(scope.row.status)" :percentage="0" color="#e6a23c" :show-text="false" />
@@ -129,40 +112,34 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column prop="tenant" label="所属租户" width="120" />
-    <el-table-column prop="init_at" label="初始时间" sortable="custom" width="150">
+    <el-table-column prop="labels" label="标签" v-if="ifShow('labels')" min-width="150">
+      <template #default="scope">
+        <el-tag v-for="item in scope.row.labels" :key="item" size="large">{{item}}</el-tag>
+      </template>
+    </el-table-column>
+    <el-table-column prop="tenant" label="所属租户" v-if="ifShow('tenant')" width="120" />
+    <el-table-column prop="init_at" v-if="ifShow('init_at')" label="初始时间" sortable="custom" width="150">
       <template #default="scope">
         {{ scope.row.init_at.Valid ? moment(scope.row.init_at.Time).format('YYYY-MM-DD HH:mm') : '' }}
       </template>
     </el-table-column>
-    <el-table-column prop="start_at" label="开始时间" sortable="custom" width="150">
+    <el-table-column prop="start_at" v-if="ifShow('start_at')" label="开始时间" sortable="custom" width="150">
       <template #default="scope">
         {{ scope.row.start_at.Valid ? moment(scope.row.start_at.Time).format('YYYY-MM-DD HH:mm') : '' }}
       </template>
     </el-table-column>
-    <el-table-column prop="expire" label="耗时" width="120">
+    <el-table-column prop="finish_at" v-if="ifShow('finish_at')" label="结束时间" sortable="custom" width="150">
+      <template #default="scope">
+        {{ scope.row.finish_at.Valid ? moment(scope.row.finish_at.Time).format('YYYY-MM-DD HH:mm') : '' }}
+      </template>
+    </el-table-column>
+    <el-table-column prop="expire" v-if="ifShow('expire')" label="耗时" width="120">
       <template #default="scope">
         {{ scope.row.start_at.Valid ? scope.row.expire : '' }}
       </template>
     </el-table-column>
-    <el-table-column prop="Option" label="操作" width="130">
+    <el-table-column prop="Option" label="操作" width="100" fixed="right">
       <template #default="scope">
-        <el-popover placement="left" :width="800" trigger="click">
-          <template #reference>
-            <el-button :icon="Search" circle />
-          </template>
-          <el-descriptions title="" :column="2">
-            <el-descriptions-item label="任务ID">{{ scope.row.id }}</el-descriptions-item>
-            <el-descriptions-item label="初始化时间">{{ moment(scope.row.init_at.Time).format('YYYY-MM-DD HH:mm:ss') }}</el-descriptions-item>
-            <el-descriptions-item label="应用名称">{{ scope.row.app_name }}</el-descriptions-item>
-            <el-descriptions-item label="开始时间">{{ moment(scope.row.start_at.Time).format('YYYY-MM-DD HH:mm:ss') }}</el-descriptions-item>
-            <el-descriptions-item label="输出信息">{{ scope.row.err_message }}</el-descriptions-item>
-            <el-descriptions-item label="结束时间">{{ moment(scope.row.finish_at.Time).format('YYYY-MM-DD HH:mm:ss') }}</el-descriptions-item>
-            <el-descriptions-item label="标签">
-              <el-tag v-for="item in scope.row.labels" :key="item" size="large">{{item}}</el-tag>
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-popover>
         <el-tooltip effect="dark" content="执行 / 回滚" placement="top">
           <el-button circle @click="execute(scope.row)" :disabled="scope.row.tenant!==tenant&&role!=='admin'" :icon="ArrowRight" />
         </el-tooltip>
@@ -199,7 +176,7 @@ import _ from 'lodash'
 const tenant = localStorage.tenant.split(",")[0]
 const store = useStore()
 const role = computed(() => {
-  return store.state.role
+  return store.state.userInfo.role
 })
 const route = useRoute()
 const list = ref([])
@@ -240,7 +217,6 @@ const shortcuts = [
     }
   },
 ]
-const taskHistoryWorkload = ref({})
 const statusFilters = ref([
   { text: 'initialize', value: 'initialize'},
   { text: 'waiting', value: 'waiting'},
@@ -260,11 +236,25 @@ const successFilters = ref([
 const filterOptions = ref({})
 const sort = ref({prop: 'init_at', order: 'descending'})
 const selected = ref([])
+const columns = ref([
+  {name: 'app_name', label: '应用名称'},{name: 'task_type', label: '任务类型'},{name: 'trigger_type', label: '触发类型'},
+  {name: 'result', label: '执行结果'},{name: 'status', label: '状态'},{name: 'labels', label: '标签'},{name: 'tenant', label: '所属租户'},
+  {name: 'start_at', label: '开始时间'},{name: 'expire', label: '耗时'}
+])
+const fields = ref([
+  {name: 'app_name', label: '应用名称'},{name: 'task_type', label: '任务类型'},{name: 'trigger_type', label: '触发类型'},
+  {name: 'result', label: '执行结果'},{name: 'status', label: '状态'},{name: 'labels', label: '标签'},{name: 'tenant', label: '所属租户'},
+  {name: 'init_at', label: '初始时间'},{name: 'start_at', label: '开始时间'},{name: 'finish_at', label: '结束时间'},{name: 'expire', label: '耗时'}
+])
 /* 生命周期函数 */
 onBeforeMount(async () => {
   if(route.query.id) {
     searchField.value = 'id'
     searchKey.value = route.query.id
+  }
+  if(route.query.app_name) {
+    searchField.value = 'app_name'
+    searchKey.value = route.query.app_name
   }
   if(route.query.tag) {
     searchLabels.value = [route.query.tag]
@@ -324,18 +314,6 @@ const execute = async (row) => {
     console.warn(e)
   })
 }
-const getTaskHistoryWorkload = async (row) => {
-  let response = await axios.get(`/lizardcd/db/task_history/${row.id}`)
-  taskHistoryWorkload.value[row.id] = response.workloads.map(x => {
-    try {
-      x.status = JSON.parse(x.status)
-    }
-    catch {
-      x.status = [x.status]
-    }
-    return x
-  })
-}
 const deleteOne = async (row) => {
   await axios.delete(`/lizardcd/db/task_history/${row.id}`)
   ElMessage.success({message: '删除成功'})
@@ -381,6 +359,11 @@ const handleMore = async (command) => {
       break
     }
   }
+}
+const ifShow = (name) => {
+  return columns.value.find(n => {
+    return n.name === name
+  })
 }
 const select = (val) => {
   selected.value = val

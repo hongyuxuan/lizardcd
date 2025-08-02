@@ -20,6 +20,7 @@ func AddUser(username, password, role, tenant string, db *gorm.DB) (err error) {
 	}
 	user := types.User{
 		Username: username,
+		Userid:   username,
 		Password: string(hashPwd),
 		Role:     role,
 		Tenant:   tenant,
@@ -58,6 +59,11 @@ func AddSettings(tenant string, db *gorm.DB) {
 		{
 			SettingKey:   "dolphinscheduler",
 			SettingValue: "{}",
+			Tenant:       tenant,
+		},
+		{
+			SettingKey:   "pipelinerun_result",
+			SettingValue: "collapse",
 			Tenant:       tenant,
 		},
 	}

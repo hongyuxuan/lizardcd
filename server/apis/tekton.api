@@ -1,13 +1,19 @@
 type (
   TektontriggerReq {
 		ObjectKind string       `json:"object_kind"`
-		Before     string       `json:"before"`
-		After      string       `json:"after"`
-		Ref        string       `json:"ref"`
-		Username   string       `json:"user_name"`
+		Before     string       `json:"before,optional"`
+		After      string       `json:"after,optional"`
+		Ref        string       `json:"ref,optional"`
+    User       GitUser       `json:"user,optional"`
+		Username   string       `json:"user_username,optional"`
+    ObjectAttributes GitObjectAttributes `json:"object_attributes,optional"`
 		Project    GitProject   `json:"project"`
-		Commits    []GitCommits `json:"commits"`
+		Commits    []GitCommits `json:"commits,optional"`
 	}
+  GitUser {
+    Name     string `json:"name"`
+    Username string `json:"username"`
+  }
   GitProject {
 		Id         int64  `json:"id"`
 		Homepage   string `json:"homepage"`
@@ -16,13 +22,24 @@ type (
 	}
 	GitCommits {
 		Id        string   `json:"id"`
-		Message   string   `json:"message"`
-		Title     string   `json:"title"`
-		Timestamp string   `json:"timestamp"`
+		Message   string   `json:"message,optional"`
+		Title     string   `json:"title,optional"`
+		Timestamp string   `json:"timestamp,optional"`
+    Url       string `json:"url"`
 		Added     []string `json:"added,optional"`
 		Modified  []string `json:"modified,optional"`
 		Removed   []string `json:"removed,optional"`
 	}
+  GitObjectAttributes {
+    TargetBranch string `json:"target_branch"`
+    IId int64 `json:"iid"`
+    Url string `json:"url"`
+    MergeCommitSha *string `json:"merge_commit_sha,optional"`
+    MergeStatus *string `json:"merge_status,optional"`
+    DetailedMergeStatus *string `json:"detailed_merge_status,optional"`
+    LastCommit *GitCommits `json:"last_commit,optional"`
+    Action *string `json:"action,optional"`
+  }
   TemplateReq {
     TemplateId int `path:"id"`
     ResourceType string `path:"resource_type"`
@@ -53,6 +70,11 @@ service lizardServer {
 	@handler getTektonResource
 	get /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name (ResourceReq) returns (Response)
   @doc(
+		summary: 修改tekton资源
+	)
+	@handler patchTektonResource
+	patch /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name (ResourceReq) returns (Response)
+  @doc(
 		summary: 获取tekton资源yaml
 	)
 	@handler getTektonYaml
@@ -63,7 +85,7 @@ service lizardServer {
 	@handler deleteTekton
 	delete /cluster/:cluster/namespace/:namespace/:resource_type/:resource_name (ResourceReq) returns (Response)
   @doc(
-		summary: 创建/更新tekton资源
+		summary: 通过go-template创建/更新tekton资源
 	)
 	@handler applyTekton
 	post /cluster/:cluster/namespace/:namespace/apply (PatchVariableReq) returns (Response)
@@ -75,8 +97,14 @@ service lizardServer {
 )
 service lizardServer {
   @doc(
-		summary: 根据应用路径触发tekton部署
+		summary: 根据应用路径触发以EventListener方式部署
 	)
 	@handler trigger
 	post /trigger (TektontriggerReq) returns (Response)
+
+  @doc(
+		summary: 根据应用路径触发以PipelineRun方式部署
+	)
+	@handler triggerpipelinerun
+	post /trigger/pipelinerun (TektontriggerReq) returns (Response)
 }

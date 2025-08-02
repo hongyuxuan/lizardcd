@@ -42,7 +42,7 @@ var listCmd = &cobra.Command{
 		if time_from != "" && time_till != "" {
 			url += fmt.Sprintf("&range=init_at==%s,%s", time_from, time_till)
 		}
-		if err := common.LizardServer.Get(url).SetResult(&res).Do(context.Background()).Err; err != nil {
+		if err := common.LizardServer.Get(url).SetSuccessResult(&res).Do(context.Background()).Err; err != nil {
 			common.PrintFatal("failed to list tasks history: %v", err)
 		}
 
@@ -50,10 +50,12 @@ var listCmd = &cobra.Command{
 		for _, d := range res.Data.Results {
 			init_at := carbon.FromStdTime(d.InitAt.Time).Format("Y-m-d H:i:s")
 			var result string
-			if d.Success.Bool == true {
-				result = "SUCCESS"
-			} else {
-				result = "FAIL"
+			if d.Success.Valid {
+				if d.Success.Bool {
+					result = "SUCCESS"
+				} else {
+					result = "FAIL"
+				}
 			}
 			row := []string{d.Id, d.AppName, d.TaskType, d.TriggerType, strings.Join(d.Labels, ", "), result, d.Status, d.Tenant, init_at, d.Expire}
 			data = append(data, row)

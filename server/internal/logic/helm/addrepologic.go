@@ -30,12 +30,12 @@ func NewAddRepoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *AddRepoLo
 func (l *AddRepoLogic) AddRepo(req *types.AddRepoReq) (resp *types.Response, err error) {
 	_, _, tenant, _ := utils.GetPayload(l.ctx)
 	var repo *commontypes.HelmRepositories
-	if err = l.svcCtx.Sqlite.Where("name = ?", req.Name).First(&repo).Error; err == nil { // err is nil means find one
+	if err = l.svcCtx.Database.Where("name = ?", req.Name).First(&repo).Error; err == nil { // err is nil means find one
 		err = errorx.NewDefaultError("Repository \"%s\" has exists", req.Name)
 		l.Logger.Error(err)
 		return
 	}
-	if err = l.svcCtx.Sqlite.Create(&commontypes.HelmRepositories{
+	if err = l.svcCtx.Database.Create(&commontypes.HelmRepositories{
 		Name:     req.Name,
 		URL:      req.Url,
 		Username: req.Username,

@@ -8,7 +8,7 @@ Prometheus:
   Host: 0.0.0.0
   Port: 15017
   Path: /metrics
-Kubeconfig: kubeconfig
+Kubeconfig: /root/.kube/config
 Etcd:
   Hosts:
     - 10.50.89.17:8089
@@ -25,15 +25,13 @@ Etcd:
 # Nacos:
 #   Host: 10.100.67.41:8848
 #   Key: lizardcd-agent.*.tektonk8s
-#   NamespaceId: fiops
+#   NamespaceId: default
 #   Group: default
-#   Username: fiops_test
+#   Username: default
 #   Password: a1363fff4381a5080b0044755524cb03
 #   Meta:
 #     Protocol: grpc
 #     Service: lizardcd-agent
 #     Namespace: "*"
 #     Cluster: tektonk8s
-ServicePrefix: it-gm-lizardcd-
-KubernetesSecretPrefix: default-token
-TektonEndpoint: http://10.50.89.13
+ServicePrefix:

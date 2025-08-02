@@ -5,6 +5,14 @@ type ListClusterReq struct {
 	WithVm bool `form:"with_vm,optional"`
 }
 
+type RegisterServiceReq struct {
+	ServiceKey string   `json:"service_key"`
+	Endpoint   string   `json:"endpoint,optional"`
+	Proxy      string   `json:"proxy,optional"`
+	Kubeconfig string   `json:"kubeconfig,optional"`
+	Labels     []string `json:"labels,optional"`
+}
+
 type Response struct {
 	Code    int         `json:"code"`
 	Data    interface{} `json:"data,omitempty"`
@@ -119,6 +127,7 @@ type RollbackReq struct {
 type PatchWorkloadReq struct {
 	Cluster      string `path:"cluster"`
 	Namespace    string `path:"namespace"`
+	WorkloadType string `path:"workload_type"`
 	WorkloadName string `path:"workload_name"`
 	Container    string `form:"container"`
 	Image        string `form:"image"`
@@ -133,6 +142,7 @@ type ListWorkloadReq struct {
 type RolloutReq struct {
 	Cluster      string `path:"cluster"`
 	Namespace    string `path:"namespace"`
+	WorkloadType string `path:"workload_type,optional"`
 	WorkloadName string `path:"workload_name"`
 }
 
@@ -141,6 +151,9 @@ type ListResourceReq struct {
 	Namespace     string `path:"namespace"`
 	ResourceType  string `path:"resource_type"`
 	LabelSelector string `form:"label_selector,optional"`
+	FieldSelector string `form:"field_selector,optional"`
+	Continue      string `form:"continue,optional"`
+	Limit         int64  `form:"limit,optional"`
 }
 
 type ResourceReq struct {
@@ -148,6 +161,8 @@ type ResourceReq struct {
 	Namespace    string `path:"namespace"`
 	ResourceType string `path:"resource_type"`
 	ResourceName string `path:"resource_name,optional"`
+	WithStatus   string `form:"withStatus,optional"`
+	Force        bool   `form:"force,optional"`
 }
 
 type PatchVariableReq struct {
@@ -165,9 +180,10 @@ type PatchYamlReq struct {
 }
 
 type ScaleReq struct {
-	Cluster   string          `path:"cluster"`
-	Namespace string          `path:"namespace"`
-	Workloads []ScaleWorkload `json:"workloads"`
+	Cluster      string          `path:"cluster"`
+	Namespace    string          `path:"namespace"`
+	WorkloadType string          `path:"workload_type"`
+	Workloads    []ScaleWorkload `json:"workloads"`
 }
 
 type ScaleWorkload struct {
@@ -179,6 +195,7 @@ type ScaleWorkload struct {
 type ReplicaReq struct {
 	Cluster       string   `path:"cluster"`
 	Namespace     string   `path:"namespace"`
+	WorkloadType  string   `path:"workload_type"`
 	Workloads     []string `json:"workloads"`
 	InitContainer bool     `json:"initContainer,optional"`
 }
@@ -193,12 +210,13 @@ type ListTagsReq struct {
 }
 
 type PodLogReq struct {
-	Cluster   string `path:"cluster"`
-	Namespace string `path:"namespace"`
-	PodName   string `path:"pod_name"`
-	Container string `form:"container"`
-	Lines     int64  `form:"lines"`
-	Follow    bool   `form:"follow,optional"`
+	Cluster    string `path:"cluster"`
+	Namespace  string `path:"namespace"`
+	PodName    string `path:"pod_name"`
+	Container  string `form:"container"`
+	Lines      int64  `form:"lines,optional"`
+	Follow     bool   `form:"follow,optional"`
+	Timestamps bool   `form:"timestamps,optional"`
 }
 
 type HpaReq struct {
@@ -211,25 +229,18 @@ type HpaReq struct {
 	Memory       int32  `json:"memory,optional"`
 }
 
-type RunTaskReq struct {
-	Id          string         `json:"id,optional"`
-	AppName     string         `json:"app_name"`
-	TaskType    string         `json:"task_type"`
-	TriggerType string         `json:"trigger_type"`
-	Labels      []string       `json:"labels,optional"`
-	Workloads   []TaskWorkload `json:"workloads,optional"`
-	ArtifactUrl string         `json:"artifact_url,optional"` // HTTP部署用
-	InitAt      string         `json:"init_at,optional"`
-	Waiting     bool           `json:"waiting,optional"`
+type FetchYamlReq struct {
+	Content   string                 `json:"content"`
+	Variables map[string]interface{} `json:"variables,optional"`
 }
 
-type TaskWorkload struct {
-	Cluster       string `json:"cluster,omitempty,optional"`
-	Namespace     string `json:"namespace,omitempty,optional"`
-	WorkloadType  string `json:"workload_type"`
-	WorkloadName  string `json:"workload_name"`
-	ContainerName string `json:"container_name,omitempty,optional"`
-	ArtifactUrl   string `json:"artifact_url,optional"`
+type PatchConfigReq struct {
+	Cluster      string `path:"cluster"`
+	Namespace    string `path:"namespace"`
+	ResourceType string `path:"resource_type"`
+	ResourceName string `path:"resource_name"`
+	Key          string `json:"key"`
+	Value        string `json:"value"`
 }
 
 type ExecuteTaskReq struct {
@@ -258,7 +269,8 @@ type VmDeployReq struct {
 	ArtifactHeader map[string]string `json:"artifact_header"`
 	DeployPath     string            `json:"deploy_path"`
 	DeployUser     string            `json:"deploy_user,optional"`
-	PreCommand     string            `json:"pre_command"`
+	CommandType    string            `json:"command_type,optional"`
+	PreCommand     string            `json:"pre_command,optional"`
 	StartCommand   string            `json:"start_command"`
 	HealthCheck    HealthCheck       `json:"health_check,optional"`
 	Targets        []string          `json:"targets"`
@@ -275,6 +287,18 @@ type HealthCheck struct {
 type HealthCheckReq struct {
 	HealthCheck
 	Target string `json:"target"`
+}
+
+type DockerDeployReq struct {
+	ContainerName string   `json:"container_name"`
+	Image         string   `json:"image"`
+	Ports         string   `json:"ports,optional"`
+	Volumes       string   `json:"volumes,optional"`
+	Network       string   `json:"network,optional"`
+	DNS           string   `json:"dns,optional"`
+	WorkingDir    string   `json:"working_dir,optional"`
+	Command       string   `json:"command,optional"`
+	Targets       []string `json:"targets"`
 }
 
 type HttpDeployReq struct {
@@ -308,13 +332,20 @@ type HttpCheckReq struct {
 }
 
 type TektontriggerReq struct {
-	ObjectKind string       `json:"object_kind"`
-	Before     string       `json:"before"`
-	After      string       `json:"after"`
-	Ref        string       `json:"ref"`
-	Username   string       `json:"user_name"`
-	Project    GitProject   `json:"project"`
-	Commits    []GitCommits `json:"commits"`
+	ObjectKind       string              `json:"object_kind"`
+	Before           string              `json:"before,optional"`
+	After            string              `json:"after,optional"`
+	Ref              string              `json:"ref,optional"`
+	User             GitUser             `json:"user,optional"`
+	Username         string              `json:"user_username,optional"`
+	ObjectAttributes GitObjectAttributes `json:"object_attributes,optional"`
+	Project          GitProject          `json:"project"`
+	Commits          []GitCommits        `json:"commits,optional"`
+}
+
+type GitUser struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
 }
 
 type GitProject struct {
@@ -326,12 +357,24 @@ type GitProject struct {
 
 type GitCommits struct {
 	Id        string   `json:"id"`
-	Message   string   `json:"message"`
-	Title     string   `json:"title"`
-	Timestamp string   `json:"timestamp"`
+	Message   string   `json:"message,optional"`
+	Title     string   `json:"title,optional"`
+	Timestamp string   `json:"timestamp,optional"`
+	Url       string   `json:"url"`
 	Added     []string `json:"added,optional"`
 	Modified  []string `json:"modified,optional"`
 	Removed   []string `json:"removed,optional"`
+}
+
+type GitObjectAttributes struct {
+	TargetBranch        string      `json:"target_branch"`
+	IId                 int64       `json:"iid"`
+	Url                 string      `json:"url"`
+	MergeCommitSha      *string     `json:"merge_commit_sha,optional"`
+	MergeStatus         *string     `json:"merge_status,optional"`
+	DetailedMergeStatus *string     `json:"detailed_merge_status,optional"`
+	LastCommit          *GitCommits `json:"last_commit,optional"`
+	Action              *string     `json:"action,optional"`
 }
 
 type TemplateReq struct {

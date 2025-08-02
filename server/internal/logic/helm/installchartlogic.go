@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
+	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
@@ -39,28 +41,38 @@ func (l *InstallChartLogic) InstallChart(req *types.InstallChartReq) (resp *type
 	ctx, cancel := context.WithTimeout(l.ctx, 2*time.Second)
 	defer cancel()
 	var ag lizardagent.LizardAgent
-	if ag, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
+	var ks *commonsvc.K8sService
+	if ag, ks, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
 		return
 	}
-	if _, err = ag.HelmInstallChart(ctx, &lizardagent.HelmInstallChartRequest{
-		RepoUrl:      req.RepoUrl,
-		ChartName:    req.ChartName,
-		ChartVersion: req.ChartVersion,
-		Namespace:    req.Namespace,
-		ReleaseName:  req.ReleaseName,
-		Values:       []byte(req.Values),
-		Wait:         wait,
-		Timeout:      timeout,
-	}); err != nil {
-		if strings.Contains(err.Error(), "DeadlineExceeded") { // timeout because --wait
-			resp = &types.Response{
-				Code:    http.StatusOK,
-				Message: "安装任务已提交",
+	if ag != nil {
+		if _, err = ag.HelmInstallChart(ctx, &lizardagent.HelmInstallChartRequest{
+			RepoUrl:      req.RepoUrl,
+			ChartName:    req.ChartName,
+			ChartVersion: req.ChartVersion,
+			Namespace:    req.Namespace,
+			ReleaseName:  req.ReleaseName,
+			Values:       []byte(req.Values),
+			Wait:         wait,
+			Timeout:      timeout,
+		}); err != nil {
+			if strings.Contains(err.Error(), "DeadlineExceeded") { // timeout because --wait
+				resp = &types.Response{
+					Code:    http.StatusOK,
+					Message: "安装任务已提交",
+				}
+				return resp, nil
 			}
-			return resp, nil
+			l.Logger.Error(err)
+			return
 		}
-		l.Logger.Error(err)
-		return
+	} else if ks != nil && ks.IsValid() {
+		if err = ks.HelmService.InstallChart(req.Namespace, req.RepoUrl, req.ChartName, req.ChartVersion, req.ReleaseName, []byte(req.Values), wait, time.Duration(timeout)*time.Second); err != nil {
+			l.Logger.Error(err)
+			return
+		}
+	} else {
+		return nil, errorx.NewDefaultError("Cannot HelmInstallChart of cluster=%s namespace=%s", req.Cluster, req.Namespace)
 	}
 	resp = &types.Response{
 		Code:    http.StatusOK,

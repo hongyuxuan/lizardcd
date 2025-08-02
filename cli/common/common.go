@@ -15,6 +15,7 @@ import (
 
 var LogLevel string
 var ConfigFile string
+var AccessToken string
 var LizardServer *utils.HttpClient
 var Nocolor bool
 
@@ -37,14 +38,24 @@ func InitConfig() {
 	}
 	viper.ReadInConfig()
 	serverAddr := viper.GetString("lizardcd.server.url")
+	uiAddr := viper.GetString("lizardcd.ui.url")
 	if serverAddr == "" {
 		viper.Set("lizardcd.server.url", "http://localhost:5117") // set default lizardcd-server address
 		viper.WriteConfig()
 		serverAddr = "http://localhost:5117"
 	}
+	if uiAddr == "" {
+		viper.Set("lizardcd.ui.url", "http://localhost:5173") // set default lizardcd-server address
+		viper.WriteConfig()
+		uiAddr = "http://localhost:5173"
+	}
 	LizardServer = utils.NewHttpClient(otel.Tracer("imroc/req"))
 	LizardServer.SetBaseURL(serverAddr)
-	if access_token := viper.GetString("lizardcd.auth.access_token"); access_token != "" {
+	access_token := viper.GetString("lizardcd.auth.access_token")
+	if AccessToken != "" {
+		access_token = AccessToken
+	}
+	if access_token != "" {
 		LizardServer.SetCommonBearerAuthToken(access_token)
 	}
 	if LogLevel == "debug" {

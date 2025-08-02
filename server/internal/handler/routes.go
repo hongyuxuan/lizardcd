@@ -32,6 +32,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Handler: lizardcd.VersionHandler(serverCtx),
 				},
 				{
+					Method:  http.MethodPost,
+					Path:    "/service",
+					Handler: lizardcd.RegisterHandler(serverCtx),
+				},
+				{
 					Method:  http.MethodGet,
 					Path:    "/services",
 					Handler: lizardcd.ListservicesHandler(serverCtx),
@@ -304,43 +309,28 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			[]rest.Route{
 				{
 					Method:  http.MethodPatch,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name",
-					Handler: kubernetes.PatchDeploymentHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:workload_type/:workload_name",
+					Handler: kubernetes.PatchWorkloadHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPatch,
-					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name",
-					Handler: kubernetes.PatchStatefulsetHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:workload_type/:workload_name/rollout",
+					Handler: kubernetes.RolloutWorkloadHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPatch,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/rollout",
-					Handler: kubernetes.RolloutDeploymentHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPatch,
-					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/rollout",
-					Handler: kubernetes.RolloutStatefulsetHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPatch,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/scale",
-					Handler: kubernetes.ScaleDeploymentHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPatch,
-					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/scale",
-					Handler: kubernetes.ScaleStatefulsetHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:workload_type/scale",
+					Handler: kubernetes.ScaleWorkloadHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPost,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/replicas",
-					Handler: kubernetes.DeploymentReplicasHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:workload_type/replicas",
+					Handler: kubernetes.WorkloadReplicasHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPost,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/images",
-					Handler: kubernetes.DeploymentImagesHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:workload_type/images",
+					Handler: kubernetes.WorkloadImagesHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,
@@ -364,33 +354,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				},
 				{
 					Method:  http.MethodGet,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments",
-					Handler: kubernetes.ListDeploymentHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type",
+					Handler: kubernetes.ListResourceHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,
-					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets",
-					Handler: kubernetes.ListStatefulsetHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name",
+					Handler: kubernetes.GetResourceHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name",
-					Handler: kubernetes.GetDeploymentHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name",
-					Handler: kubernetes.GetStatefulsetHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/pods",
-					Handler: kubernetes.DeploymentPodsHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/cluster/:cluster/namespace/:namespace/statefulsets/:workload_name/pods",
-					Handler: kubernetes.StatefulsetPodsHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:workload_type/:workload_name/pods",
+					Handler: kubernetes.WorkloadPodsHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,
@@ -404,8 +379,8 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				},
 				{
 					Method:  http.MethodGet,
-					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/status",
-					Handler: kubernetes.DeploymentPodStatusHandler(serverCtx),
+					Path:    "/cluster/:cluster/namespace/:namespace/:workload_type/:workload_name/status",
+					Handler: kubernetes.WorkloadPodStatusHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,
@@ -421,6 +396,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodGet,
 					Path:    "/cluster/:cluster/namespace/:namespace/deployments/:workload_name/hpa",
 					Handler: kubernetes.GethpaHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/fetch/yaml",
+					Handler: kubernetes.FetchYamlHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/kv",
+					Handler: kubernetes.PatchConfigmapHandler(serverCtx),
 				},
 			}...,
 		),
@@ -464,18 +449,23 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			[]rest.Route{
 				{
 					Method:  http.MethodPost,
-					Path:    "/deploy",
+					Path:    "/vm/deploy",
 					Handler: vm.DeployHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPost,
-					Path:    "/healthcheck",
+					Path:    "/ssh/deploy",
+					Handler: vm.SshdeployHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/vm/healthcheck",
 					Handler: vm.HealthcheckHandler(serverCtx),
 				},
 			}...,
 		),
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/lizardcd/vm"),
+		rest.WithPrefix("/lizardcd"),
 	)
 
 	server.AddRoutes(
@@ -518,6 +508,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Handler: tekton.GetTektonResourceHandler(serverCtx),
 				},
 				{
+					Method:  http.MethodPatch,
+					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name",
+					Handler: tekton.PatchTektonResourceHandler(serverCtx),
+				},
+				{
 					Method:  http.MethodGet,
 					Path:    "/cluster/:cluster/namespace/:namespace/:resource_type/:resource_name/yaml",
 					Handler: tekton.GetTektonYamlHandler(serverCtx),
@@ -544,6 +539,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/trigger",
 				Handler: tekton.TriggerHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/trigger/pipelinerun",
+				Handler: tekton.TriggerpipelinerunHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/lizardcd/tekton"),

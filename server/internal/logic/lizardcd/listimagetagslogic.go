@@ -37,7 +37,7 @@ func NewListimagetagsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Lis
 func (l *ListimagetagsLogic) Listimagetags(req *types.ListTagsReq) (resp *types.Response, err error) {
 	// get application by app_name
 	var application *commontypes.Application
-	if err = l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).
+	if err = l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).
 		Model(&commontypes.Application{}).
 		Where("app_name = ?", req.AppName).
 		Find(&application).Error; errors.Is(err, gorm.ErrRecordNotFound) {
@@ -46,7 +46,7 @@ func (l *ListimagetagsLogic) Listimagetags(req *types.ListTagsReq) (resp *types.
 		return
 	}
 	var repo commontypes.ImageRepository
-	l.svcCtx.Sqlite.Model(&commontypes.ImageRepository{}).Where("id = ?", application.RepoId).First(&repo)
+	l.svcCtx.Database.Model(&commontypes.ImageRepository{}).Where("id = ?", application.RepoId).First(&repo)
 	var artifactList []commontypes.ArtifactListRes
 	if repo.RepoType == constant.REPO_TYPE_ARTIFACTORY {
 		var fileList []commontypes.JfrogFileItem
@@ -61,7 +61,7 @@ func (l *ListimagetagsLogic) Listimagetags(req *types.ListTagsReq) (resp *types.
 			reg := regexp.MustCompile(`http[s]{0,1}://(.+)`)
 			matches := reg.FindStringSubmatch(repo.RepoUrl)
 			artifact_url := fmt.Sprintf("%s/%s/%s:%s", matches[1], application.RepoName, application.ImageName, item.Uri[1:])
-			if application.DeployType != "容器" {
+			if application.DeployType != "容器" && application.DeployType != "Docker" {
 				artifact_url = fmt.Sprintf("%s/artifactory/%s/%s%s", repo.RepoUrl, application.RepoName, application.ImageName, item.Uri)
 			}
 			artifactList = append(artifactList, commontypes.ArtifactListRes{

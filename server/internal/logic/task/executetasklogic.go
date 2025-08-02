@@ -33,7 +33,7 @@ func NewExecuteTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Execu
 func (l *ExecuteTaskLogic) ExecuteTask(req *types.ExecuteTaskReq) (resp *types.Response, err error) {
 	_, role, tenant, _ := utils.GetPayload(l.ctx)
 	var taskHistory commontypes.TaskHistory
-	tx := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetTaskHistory"))
+	tx := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetTaskHistory"))
 	if role != constant.ROLE_ADMIN {
 		tx.Where("tenant IN ?", tenant)
 	}
@@ -49,21 +49,15 @@ func (l *ExecuteTaskLogic) ExecuteTask(req *types.ExecuteTaskReq) (resp *types.R
 	if req.ArtifactUrl != "" {
 		artifactUrl = req.ArtifactUrl
 	}
-	runTaskReq := &types.RunTaskReq{
+	runTaskReq := &commontypes.RunTaskReq{
 		Id:          taskHistory.Id,
 		AppName:     taskHistory.AppName,
 		TaskType:    taskHistory.TaskType,
 		TriggerType: taskHistory.TriggerType,
 		Labels:      taskHistory.Labels,
-		Workloads: lo.Map(taskHistory.TaskHistoryWorkloads, func(w commontypes.TaskHistoryWorkload, _ int) types.TaskWorkload {
-			return types.TaskWorkload{
-				Cluster:       w.Workload.Cluster,
-				Namespace:     w.Workload.Namespace,
-				WorkloadType:  w.Workload.WorkloadType,
-				WorkloadName:  w.Workload.WorkloadName,
-				ContainerName: w.Workload.ContainerName,
-				ArtifactUrl:   artifactUrl,
-			}
+		Workloads: lo.Map(taskHistory.TaskHistoryWorkloads, func(w commontypes.TaskHistoryWorkload, _ int) commontypes.Workload {
+			w.Workload.ArtifactUrl = artifactUrl
+			return w.Workload
 		}),
 		InitAt:      carbon.FromStdTime(taskHistory.InitAt.Time).Format("Y-m-d H:i:s"),
 		ArtifactUrl: artifactUrl,

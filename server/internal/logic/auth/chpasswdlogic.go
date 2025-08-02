@@ -26,7 +26,7 @@ func NewChpasswdLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Chpasswd
 }
 
 func (l *ChpasswdLogic) Chpasswd(req *types.ChpasswdReq) (resp *types.Response, err error) {
-	if err = utils.ModifyPassword(req.Username, req.OldPassword, req.NewPassword, l.svcCtx.Sqlite); err != nil {
+	if err = utils.ModifyPassword(req.Username, req.OldPassword, req.NewPassword, l.svcCtx.Database); err != nil {
 		l.Logger.Error(err)
 		return
 	}

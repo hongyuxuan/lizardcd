@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/hongyuxuan/lizardcd/common/errorx"
@@ -18,7 +18,7 @@ func PatchYamlHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			httpx.Error(w, errorx.NewError(http.StatusBadRequest, err.Error(), nil))
 			return
 		}
-		body, err := ioutil.ReadAll(r.Body)
+		body, _ := io.ReadAll(r.Body)
 		l := kubernetes.NewPatchYamlLogic(r.Context(), svcCtx)
 		resp, err := l.PatchYaml(&req, string(body))
 		if err != nil {

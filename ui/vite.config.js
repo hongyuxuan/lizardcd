@@ -3,7 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import VueDevTools from 'vite-plugin-vue-devtools'
-import { resolve } from 'path';
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -30,6 +30,10 @@ export default defineConfig({
     proxy: {
       '/lizardcd': {
         target: 'http://localhost:5117',
+        changeOrigin: true,
+      },
+      '/tekton-pipelines': {
+        target: 'http://tekton-pipelines',
         changeOrigin: true,
       },
       '/ws': {

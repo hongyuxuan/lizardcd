@@ -38,7 +38,7 @@ func NewCallbackLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Callback
 
 func (l *CallbackLogic) Callback(req *types.CallbackReq) (redirect string, err error) {
 	var oauth2 commontypes.Oauth2
-	if err = l.svcCtx.Sqlite.Model(&commontypes.Oauth2{}).Where("name = ?", req.Name).First(&oauth2).Error; err != nil {
+	if err = l.svcCtx.Database.Model(&commontypes.Oauth2{}).Where("name = ?", req.Name).First(&oauth2).Error; err != nil {
 		l.Logger.Error(err)
 		return
 	}
@@ -80,7 +80,7 @@ func (l *CallbackLogic) Callback(req *types.CallbackReq) (redirect string, err e
 	}
 	l.Logger.Infof("Get access_token \"%s\" from Oauth2", accessToken)
 
-	// 根据access_token获取profile
+	// 根据 access_token 获取profile
 	var userinfo interface{}
 	if strings.Contains(oauth2.UserinfoUrl, "github.com") { // github Must specify access token via Authorization header
 		err = oauth2Client.Get(oauth2.UserinfoUrl).SetBearerAuthToken(accessToken).SetSuccessResult(&userinfo).Do(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "http.GetUserInfo")).Err
@@ -88,26 +88,37 @@ func (l *CallbackLogic) Callback(req *types.CallbackReq) (redirect string, err e
 		err = oauth2Client.Get(oauth2.UserinfoUrl).SetQueryParam("access_token", accessToken).SetSuccessResult(&userinfo).Do(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "http.GetUserInfo")).Err
 	}
 	if err != nil {
+		if strings.Contains(err.Error(), "expired") {
+			err = errorx.NewError(http.StatusUnauthorized, err.Error(), nil)
+		}
 		l.Logger.Error(err)
 		return
 	}
 	userinfob, _ := json.MarshalIndent(userinfo, "", "\t")
 	l.Logger.Infof("Get userinfo: \n%s", string(userinfob))
-	if err != nil {
-		if strings.Contains(err.Error(), "expired") {
-			err = errorx.NewError(http.StatusUnauthorized, err.Error(), nil)
-		}
+
+	// jsonpath 提取用户信息
+	// 提取 userId
+	var lookupUserid interface{}
+	if lookupUserid, err = jsonpath.JsonPathLookup(userinfo, oauth2.IdJsonpath); err != nil {
+		l.Logger.Error(err)
 		return
 	}
-
-	// jsonpath提取用户信息
-	// 提取username
+	userid := utils.AnyToString(lookupUserid)
+	// 提取 username
 	var lookupUsername interface{}
 	if lookupUsername, err = jsonpath.JsonPathLookup(userinfo, oauth2.UserJsonpath); err != nil {
 		l.Logger.Error(err)
 		return
 	}
 	username := utils.AnyToString(lookupUsername)
+	// 提取 email
+	var lookupEmail interface{}
+	if lookupEmail, err = jsonpath.JsonPathLookup(userinfo, oauth2.EmailJsonpath); err != nil {
+		l.Logger.Error(err)
+		return
+	}
+	email := utils.AnyToString(lookupEmail)
 	// 提取头像
 	var lookupAvatar interface{}
 	var avatar string
@@ -119,11 +130,13 @@ func (l *CallbackLogic) Callback(req *types.CallbackReq) (redirect string, err e
 		avatar = utils.AnyToString(lookupAvatar)
 	}
 	var user commontypes.User
-	if err = l.svcCtx.Sqlite.Model(commontypes.User{}).Where("username = ?", username).
-		WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "tidb.GetUserByName")).
+	if err = l.svcCtx.Database.Model(commontypes.User{}).Where("userid = ?", userid).
+		WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "tidb.GetUserById")).
 		First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) { // 用户首次登录
 		user = commontypes.User{
+			Userid:   userid,
 			Username: username,
+			Email:    email,
 			Role:     "readonly",
 			Tenant:   "",
 			Profile: map[string]string{
@@ -131,11 +144,19 @@ func (l *CallbackLogic) Callback(req *types.CallbackReq) (redirect string, err e
 			},
 			UpdateAt: time.Now(),
 		}
-		if err = l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "tidb.CreateUser")).Create(&user).Error; err != nil {
+		if err = l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "tidb.CreateUser")).Create(&user).Error; err != nil {
 			l.Logger.Error(err)
 			return
 		}
 		l.Logger.Infof("Insert new user: %+v into database success", user)
+	} else { // 非首次登录，更新 username、email 等信息
+		user.Username = username
+		user.Email = email
+		if err = l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "tidb.SaveUserInfo")).Save(&user).Error; err != nil {
+			l.Logger.Error(err)
+			return
+		}
+		l.Logger.Infof("Update exist user: %+v into database success", user)
 	}
 	if accessToken, _, err = l.svcCtx.GetJwtToken(user, nil); err != nil {
 		l.Logger.Error(err)

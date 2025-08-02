@@ -6,19 +6,18 @@ import (
 	"time"
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/config"
-	"github.com/hongyuxuan/lizardcd/common/utils"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.opentelemetry.io/otel"
 
-	tekton "github.com/hongyuxuan/tekton-sdk-go"
-	"github.com/hongyuxuan/tekton-sdk-go/core/option"
+	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	triggerclient "github.com/tektoncd/triggers/pkg/client/clientset/versioned"
 	versionedclient "istio.io/client-go/pkg/clientset/versioned"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/flowcontrol"
+
+	dockerclient "github.com/docker/docker/client"
 )
 
 type ServiceContext struct {
@@ -26,21 +25,21 @@ type ServiceContext struct {
 	EtcdClient    *clientv3.Client
 	Clientset     *kubernetes.Clientset
 	Dynamicclient dynamic.Interface
-	Request_k8s   *utils.HttpClient
+	Token         string
 	Istioclient   *versionedclient.Clientset
-	TektonClient  *tekton.Client
+	TektonClient  *tektonclient.Clientset
+	TriggerClient *triggerclient.Clientset
+	DockerClient  *dockerclient.Client
+	RestConfig    *rest.Config
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	clientset, dynamicclient, k8sclient, istioclient, tektonclient := createKubernetes(c)
-	if c.Log.Level == "debug" && k8sclient != nil {
-		k8sclient.EnableDebug(true)
-	}
+	clientset, restConf, dynamicclient, istioclient, tektonClient, triggerClient, token := commonsvc.CreateKubernetes(c.Kubeconfig, "")
 
-	var client *clientv3.Client
+	var etcdClient *clientv3.Client
 	if len(c.Etcd.Hosts) > 0 {
 		var err error
-		client, err = clientv3.New(clientv3.Config{
+		etcdClient, err = clientv3.New(clientv3.Config{
 			Endpoints:   c.Etcd.Hosts,
 			DialTimeout: 5 * time.Second,
 		})
@@ -51,58 +50,21 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		logx.Infof("Connect to etcd host=%s success", strings.Join(c.Etcd.Hosts, ","))
 	}
 
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
+	if err == nil {
+		logx.Infof("Connect to docker daemon success")
+	}
+
 	return &ServiceContext{
 		Config:        c,
 		Clientset:     clientset,
 		Dynamicclient: dynamicclient,
-		Request_k8s:   k8sclient,
-		EtcdClient:    client,
+		Token:         token,
+		EtcdClient:    etcdClient,
 		Istioclient:   istioclient,
-		TektonClient:  tektonclient,
+		TektonClient:  tektonClient,
+		TriggerClient: triggerClient,
+		DockerClient:  cli,
+		RestConfig:    restConf,
 	}
-}
-
-func createKubernetes(c config.Config) (*kubernetes.Clientset, dynamic.Interface, *utils.HttpClient, *versionedclient.Clientset, *tekton.Client) {
-	var conf *rest.Config
-	var tektonclient *tekton.Client
-	var err error
-	if c.Kubeconfig != "" {
-		logx.Infof("Using kubeconfig=%s", c.Kubeconfig)
-		conf, err = clientcmd.BuildConfigFromFlags("", c.Kubeconfig)
-		tektonclient = tekton.NewClient(option.WithKubeconfig(c.Kubeconfig), option.WithSecretPrefix(c.KubernetesSecretPrefix))
-	} else {
-		logx.Info("Using in cluster config")
-		conf, err = rest.InClusterConfig()
-		if conf != nil {
-			conf.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(1000, 1000) // setting a big ratelimiter for client-side throttling, default 5
-		}
-		tektonclient = tekton.NewClient(option.WithSecretPrefix(c.ServicePrefix))
-	}
-	if err != nil {
-		logx.Errorf("Cannot build connection to kubernetes with kubeconfig or in-cluster, err: %v. Will start as an vm agent.", err)
-		return nil, nil, nil, nil, nil
-	}
-	clientset, err := kubernetes.NewForConfig(conf)
-	if err != nil {
-		logx.Error(err)
-		os.Exit(0)
-	}
-	dynamicclient, err := dynamic.NewForConfig(conf)
-	if err != nil {
-		logx.Error(err)
-		os.Exit(0)
-	}
-
-	// create k8s httpclient
-	var k8sclient *utils.HttpClient = utils.NewHttpClient(otel.Tracer("imroc/req"))
-	k8sclient.EnableInsecureSkipVerify().SetBaseURL(conf.Host)
-	logx.Infof("Init k8s client %s success", k8sclient.BaseURL)
-
-	// create istio client if posible
-	istioclient, err := versionedclient.NewForConfig(conf)
-	if err != nil {
-		logx.Errorf("Failed to create istio client: %s", err)
-	}
-
-	return clientset, dynamicclient, k8sclient, istioclient, tektonclient
 }

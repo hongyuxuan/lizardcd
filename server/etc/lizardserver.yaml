@@ -9,11 +9,11 @@ Prometheus:
   Host: 0.0.0.0
   Port: 15117
   Path: /metrics
-Telemetry:
-  Name: lizardcd-server
-  Endpoint: jaeger-collector:4317
-  Sampler: 1.0
-  Batcher: otlphttp
+# Telemetry:
+#   Name: lizardcd-server
+#   Endpoint: jaeger-collector
+#   Sampler: 1.0
+#   Batcher: otlphttp
 Auth:
   AccessSecret: wLnOk8keh/WO5u7lX8H1dB1/mcuHvnI/jfWCMXMPg9o=
   AccessExpire: 3153600000
@@ -21,17 +21,28 @@ Auth:
   EncKey: LgY0l&4zvABWXpk@4GL.K_u.lTr=tQ!y
 Etcd:
   Address: 10.50.89.17:8089
+  # TTL: 60
+  # LeaderPrefix: /lizardcd-job-election
+  # LeaderRetryInterval: 10
+  # LeaderRetryTimeout: 10
 # Consul:
 #   Address: 10.50.89.17:8086
 # Nacos:
 #   Address: 10.100.67.41:8848
-#   NamespaceId: fiops
+#   NamespaceId: default
 #   Group: default
-#   Username: fiops_test
+#   Username: default
 #   Password: a1363fff4381a5080b0044755524cb03
-Sqlite: ./lizardcd.db
-ServicePrefix: it-gm-lizardcd-
 Rpc:
-  Timeout: 2000 # millisecond
+  Timeout: 300000 # millisecond
   KeepaliveTime: 600 # seconds
-  RetryInterval: 600 # seconds 
+  RetryInterval: 600 # seconds
+Database:
+  Type: tidb
+  # DBfile: ./lizardcd.db
+  Host: 10.50.219.19
+  Port: 4000
+  Database: lizardcd
+  Username: lizardcd
+  Password: lizardcd
+ServicePrefix:

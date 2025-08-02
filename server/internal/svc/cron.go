@@ -55,13 +55,13 @@ func (c *CronService) RemoveCron(application commontypes.Application, tenant str
 		// delete processCode and cronId from database
 		application.GitOps.ProcessCode = 0
 		application.GitOps.CronId = 0
-		c.svcCtx.Sqlite.Model(&application).Updates(commontypes.Application{
+		c.svcCtx.Database.Model(&application).Updates(commontypes.Application{
 			GitOps: application.GitOps,
 		})
 	}
 }
 
-func (c *CronService) AddCron(application commontypes.Application, tenant string) (err error) {
+func (c *CronService) AddGitOpsCron(application commontypes.Application, tenant string) (err error) {
 	if application.GitOps.UseDS {
 		return c.SaveDsJob(application, tenant)
 	}
@@ -71,7 +71,7 @@ func (c *CronService) AddCron(application commontypes.Application, tenant string
 			c.RemoveCron(application, tenant, false)
 			return
 		}
-		if _, err = c.taskService.RunTask(&types.RunTaskReq{
+		if _, err = c.taskService.RunTask(&commontypes.RunTaskReq{
 			AppName:     application.AppName,
 			TaskType:    constant.TASK_TYPE_SYNCHRONIZE,
 			TriggerType: constant.TASK_TRIGGER_TYPE_CRON,
@@ -83,7 +83,7 @@ func (c *CronService) AddCron(application commontypes.Application, tenant string
 		return fmt.Errorf("failed to add cron for autosync, application=%s: %w", application.AppName, err)
 	}
 	application.GitOps.HostPortId = fmt.Sprintf("%s:%d", utils.GetLocalListener(c.svcCtx.Config.Port), cronId)
-	c.svcCtx.Sqlite.Model(&commontypes.Application{}).Where("app_name = ?", application.AppName).Updates(commontypes.Application{
+	c.svcCtx.Database.Model(&commontypes.Application{}).Where("app_name = ?", application.AppName).Updates(commontypes.Application{
 		GitOps: application.GitOps,
 	})
 	c.svcCtx.CronIdMap[application.AppName] = types.CronData{
@@ -96,22 +96,30 @@ func (c *CronService) AddCron(application commontypes.Application, tenant string
 }
 
 func (c *CronService) LoadCronJob() {
+	// gitops cronjob
 	var applications []commontypes.Application
-	if err := c.svcCtx.Sqlite.Model(&commontypes.Application{}).Where("git_ops like ?", `%自动%`).Find(&applications).Error; err != nil {
+	if err := c.svcCtx.Database.Model(&commontypes.Application{}).Where("git_ops like ?", `%自动%`).Find(&applications).Error; err != nil {
 		c.Logger.Error(err)
 		return
 	}
 	for _, application := range applications {
-		if err := c.AddCron(application, application.Tenant); err != nil {
+		if err := c.AddGitOpsCron(application, application.Tenant); err != nil {
 			c.Logger.Error(err)
 		}
 	}
 	c.svcCtx.Cron.Start()
+
+	// task status check cronjob
+	c.svcCtx.Cron.AddFunc("0 * * * *", func() {
+		if c.svcCtx.LeaderElection.IsLeader() { // only leader do job
+			c.taskService.CheckTaskStatus()
+		}
+	})
 }
 
 func (c *CronService) CheckCron(appName string) bool {
 	var application commontypes.Application
-	if err := c.svcCtx.Sqlite.Model(&commontypes.Application{}).
+	if err := c.svcCtx.Database.Model(&commontypes.Application{}).
 		Where("app_name = ?", appName).
 		Where("git_ops LIKE ?", "%自动%").
 		First(&application).Error; err != nil {
@@ -135,14 +143,14 @@ func (c *CronService) SaveDsJob(application commontypes.Application, tenant stri
 	if application.GitOps.ProcessCode == 0 {
 		// get server_url settings
 		setting := commontypes.Settings{}
-		if err = c.svcCtx.Sqlite.First(&setting, "setting_key = ?", "server_url").Error; err != nil {
+		if err = c.svcCtx.Database.First(&setting, "setting_key = ?", "server_url").Error; err != nil {
 			return fmt.Errorf("error finding server_url settings: %v", err)
 		}
 		serverUrl := setting.SettingValue
 
 		// get processdefine template
 		var tpl commontypes.YamlTemplate
-		if err = c.svcCtx.Sqlite.First(&tpl, "type = ?", "processdefine").Error; err != nil {
+		if err = c.svcCtx.Database.First(&tpl, "type = ?", "processdefine").Error; err != nil {
 			return fmt.Errorf("error getting processdefine template: %v", err)
 		}
 		variables := map[string]interface{}{
@@ -183,7 +191,7 @@ func (c *CronService) SaveDsJob(application commontypes.Application, tenant stri
 		// save projectCode and cronId to database
 		application.GitOps.ProcessCode = processCode
 		application.GitOps.CronId = cronId
-		c.svcCtx.Sqlite.Model(&application).Updates(commontypes.Application{
+		c.svcCtx.Database.Model(&application).Updates(commontypes.Application{
 			GitOps: application.GitOps,
 		})
 	} else {
@@ -205,7 +213,7 @@ func (c *CronService) SaveDsJob(application commontypes.Application, tenant stri
 
 func (c *CronService) getDsSettings(tenant string) (client *req.Client, dsSetting *commontypes.DolphinschedulerSetting, err error) {
 	var setting commontypes.Settings
-	if err = c.svcCtx.Sqlite.Model(&commontypes.Settings{}).
+	if err = c.svcCtx.Database.Model(&commontypes.Settings{}).
 		Where("setting_key = ?", "dolphinscheduler").
 		Where("tenant = ?", tenant).
 		First(&setting).Error; err != nil {

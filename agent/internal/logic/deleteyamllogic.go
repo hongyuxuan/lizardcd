@@ -7,6 +7,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -17,7 +18,7 @@ type DeleteYamlLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
-	K8sService *svc.K8sService
+	K8sService *commonsvc.K8sService
 }
 
 func NewDeleteYamlLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DeleteYamlLogic {
@@ -25,7 +26,7 @@ func NewDeleteYamlLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 		ctx:        ctx,
 		svcCtx:     svcCtx,
 		Logger:     logx.WithContext(ctx),
-		K8sService: svc.GetK8sService(ctx, svcCtx),
+		K8sService: commonsvc.NewK8sService(ctx, svcCtx.Clientset, svcCtx.Dynamicclient, svcCtx.TektonClient, svcCtx.TriggerClient),
 	}
 }
 

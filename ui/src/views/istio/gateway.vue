@@ -3,7 +3,7 @@
   <div class="box-body" style="padding-top:20px;padding-bottom:0">
     <el-alert type="warning" show-icon style="margin-bottom:15px">
       <template #title>
-        关于 Gateway 配置参考：<el-link href="https://istio.io/latest/zh/docs/reference/config/networking/gateway/" :underline="false" type="primary" target="_blank">Gateway</el-link>
+        关于 Gateway 配置参考：<el-link href="https://istio.io/latest/zh/docs/reference/config/networking/gateway/" underline="never" type="primary" target="_blank">Gateway</el-link>
       </template>
     </el-alert>
     <el-row>
@@ -36,7 +36,7 @@
       </el-table-column>
       <el-table-column prop="name" label="名称" min-width="200">
         <template #default="scope">
-          <el-link :underline="false">{{ scope.row.metadata.name }}</el-link>
+          <el-link underline="never">{{ scope.row.metadata.name }}</el-link>
         </template>
       </el-table-column>
       <el-table-column label="创建时间" width="170">

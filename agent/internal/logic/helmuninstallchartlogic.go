@@ -5,7 +5,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
-	"github.com/hongyuxuan/lizardcd/common/utils"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -16,20 +16,22 @@ type HelmUninstallChartLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
-	helmUtil *utils.HelmUtil
+	helmService *commonsvc.HelmService
 }
 
 func NewHelmUninstallChartLogic(ctx context.Context, svcCtx *svc.ServiceContext) *HelmUninstallChartLogic {
+	helmService := commonsvc.NewHelmService(ctx)
+	helmService.SetKubeconfig(svcCtx.Config.Kubeconfig)
 	return &HelmUninstallChartLogic{
-		ctx:      ctx,
-		svcCtx:   svcCtx,
-		Logger:   logx.WithContext(ctx),
-		helmUtil: utils.NewHelmUtil(ctx),
+		ctx:         ctx,
+		svcCtx:      svcCtx,
+		Logger:      logx.WithContext(ctx),
+		helmService: helmService,
 	}
 }
 
 func (l *HelmUninstallChartLogic) HelmUninstallChart(in *agent.HelmInstallChartRequest) (*agent.Response, error) {
-	if err := l.helmUtil.UninstallChart(in.Namespace, l.svcCtx.Config.Kubeconfig, in.ReleaseName); err != nil {
+	if err := l.helmService.UninstallChart(in.Namespace, in.ReleaseName); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &agent.Response{

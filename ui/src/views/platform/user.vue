@@ -4,7 +4,7 @@
     <el-row>
       <el-col :span="12">
         <el-button-group>
-          <el-button icon="refresh" size="large" style="margin-right:5px" @click="getList(1)" />
+          <el-button icon="refresh" size="large" style="margin-right:5px" @click="getList(current)" />
           <el-input v-model="searchKey" placeholder="输入名称进行搜索" size="large" :prefix-icon="Search" @change="getList(1);current=1" clearable style="width:300px;" />
         </el-button-group>
       </el-col>
@@ -16,6 +16,7 @@
       :data="list"
       class="line-height40" 
       style="width:100%;margin-top:10px">
+      <el-table-column prop="userid" label="用户ID" min-width="150" />
       <el-table-column prop="username" label="用户名" min-width="150" />
       <el-table-column prop="tenant" label="所属租户" min-width="150" />
       <el-table-column prop="role" label="用户权限" min-width="150" />
@@ -57,8 +58,14 @@
   </template>
   <template #default>
     <el-form ref="user" :model="form" :rules="rules" label-width="100px">
+      <el-form-item label="用户ID" prop="userid">
+        <el-input v-model="form.userid" size="large" :disabled="edit" />
+      </el-form-item>
       <el-form-item label="用户名" prop="username">
         <el-input v-model="form.username" size="large" :disabled="edit" />
+      </el-form-item>
+      <el-form-item label="邮箱" prop="email">
+        <el-input v-model="form.email" size="large" />
       </el-form-item>
       <el-form-item label="所属租户" prop="tenant">
         <el-select 
@@ -108,6 +115,7 @@ const form = ref({
   role: 'admin'
 })
 const rules = reactive({
+  userid: [{required: true, message: '请填写用户ID'}],
   username: [{required: true, message: '请填写用户名'}],
   password: [{required: true, message: '请填写密码'}],
 })

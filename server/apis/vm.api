@@ -4,7 +4,8 @@ type (
     ArtifactHeader map[string]string `json:"artifact_header"`
 		DeployPath     string            `json:"deploy_path"`
     DeployUser     string            `json:"deploy_user,optional"`
-    PreCommand     string            `json:"pre_command"`
+    CommandType    string            `json:"command_type,optional"`
+    PreCommand     string            `json:"pre_command,optional"`
     StartCommand   string            `json:"start_command"`
     HealthCheck    HealthCheck       `json:"health_check,optional"`
     Targets        []string          `json:"targets"`
@@ -22,9 +23,21 @@ type (
     HealthCheck
     Target string `json:"target"`
   }
+
+  DockerDeployReq {
+    ContainerName string   `json:"container_name"`
+    Image         string   `json:"image"`
+    Ports         string   `json:"ports,optional"`
+    Volumes       string   `json:"volumes,optional"`
+    Network       string   `json:"network,optional"`
+    DNS           string   `json:"dns,optional"`
+    WorkingDir    string   `json:"working_dir,optional"`
+	  Command       string   `json:"command,optional"`
+    Targets       []string `json:"targets"`
+  }
 )
 @server(
-	prefix: /lizardcd/vm
+	prefix: /lizardcd
 	group: vm
 	jwt: Auth
   middleware: Validateuser
@@ -34,11 +47,17 @@ service lizardServer {
 		summary: 虚机部署
 	)
 	@handler deploy
-	post /deploy (VmDeployReq) returns (Response)
+	post /vm/deploy (VmDeployReq) returns (Response)
+
+  @doc(
+		summary: SSH部署
+	)
+	@handler sshdeploy
+	post /ssh/deploy returns (Response)
 
   @doc(
 		summary: 部署健康检查
 	)
 	@handler healthcheck
-	post /healthcheck (HealthCheckReq) returns (Response)
+	post /vm/healthcheck (HealthCheckReq) returns (Response)
 }

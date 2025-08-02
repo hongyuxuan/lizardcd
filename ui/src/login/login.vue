@@ -35,8 +35,10 @@
 </template>
 <script setup>
 import { onBeforeMount, ref, reactive } from 'vue'
+import { useRoute } from 'vue-router'
 import { axios } from '/src/assets/util/axios'
 import moment from 'moment'
+const route = useRoute()
 const form = ref({})
 const rules = reactive({
   username: [{required: true, message: '请输入用户名'}],
@@ -64,7 +66,11 @@ const submit = async (f) => {
     if(valid) {
       let response = await axios.post(`/lizardcd/auth/login`, form.value)
       localStorage.access_token = response.access_token
-      window.location.href = "/"
+      if(window.location.search.startsWith('?redirect=')) {
+        window.location.href = window.location.search.substring('?redirect='.length, window.location.search.length)
+      } else {
+        window.location.href = "/"
+      }
     } else {
       ElMessage.warning('必填项未填完')
     }

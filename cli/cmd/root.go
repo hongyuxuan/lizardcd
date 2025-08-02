@@ -10,11 +10,13 @@ import (
 	"github.com/hongyuxuan/lizardcd/cli/cmd/application"
 	"github.com/hongyuxuan/lizardcd/cli/cmd/apply"
 	"github.com/hongyuxuan/lizardcd/cli/cmd/config"
+	"github.com/hongyuxuan/lizardcd/cli/cmd/database"
 	"github.com/hongyuxuan/lizardcd/cli/cmd/deployment"
 	"github.com/hongyuxuan/lizardcd/cli/cmd/helm"
 	"github.com/hongyuxuan/lizardcd/cli/cmd/login"
 	"github.com/hongyuxuan/lizardcd/cli/cmd/statefulset"
 	"github.com/hongyuxuan/lizardcd/cli/cmd/task"
+	"github.com/hongyuxuan/lizardcd/cli/cmd/tkn"
 	common "github.com/hongyuxuan/lizardcd/cli/common"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +38,7 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&common.ConfigFile, "config", "c", "~/.lizardcd-cli.yaml", "config file")
+	rootCmd.PersistentFlags().StringVar(&common.AccessToken, "access-token", "", "lizardcd-server access_token")
 	rootCmd.PersistentFlags().StringVarP(&common.LogLevel, "log.level", "l", "info", "log level")
 	rootCmd.PersistentFlags().BoolVar(&common.Nocolor, "nocolor", false, "if ouput without color")
 
@@ -48,4 +51,6 @@ func init() {
 	rootCmd.AddCommand(application.ApplicationCmd)
 	rootCmd.AddCommand(task.TaskCmd)
 	rootCmd.AddCommand(helm.HelmCmd)
+	rootCmd.AddCommand(tkn.TknCmd)
+	rootCmd.AddCommand(database.DatabaseCmd)
 }

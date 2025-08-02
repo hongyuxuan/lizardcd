@@ -76,9 +76,6 @@
         </template>
         <el-input v-model="form.webhook_base_url" size="large" clearable />
       </el-form-item>
-      <el-form-item label="DefaultSecret" prop="secret">
-        <el-input v-model="form.secret" size="large" type="password" show-password />
-      </el-form-item>
       <el-form-item label="所属租户" prop="tenant">
         <el-input v-model="form.tenant" disabled size="large" />
       </el-form-item>
@@ -109,7 +106,6 @@ const show = ref(false)
 const form = ref({})
 const rules = reactive({
   git_http_url: [{required: true, message: '请填写仓库地址'}],
-  secret: [{required: true, message: '请填写默认secret'}],
 })
 const edit = ref(false)
 const repo = ref(null)

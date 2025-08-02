@@ -9,7 +9,7 @@
         </el-button-group>
       </el-col>
       <el-col :span="12">
-        <el-button class="pull-right" size="large" type="primary" @click="show=true;form={}">新建租户</el-button>
+        <el-button class="pull-right" size="large" type="primary" @click="edit=false;show=true;form={}">新建租户</el-button>
       </el-col>
     </el-row>
     <el-table 

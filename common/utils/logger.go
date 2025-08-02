@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -11,19 +10,27 @@ import (
 
 var Log = logrus.New()
 
-type MyFormatter struct{}
+type MyFormatter struct {
+	logrus.TextFormatter
+}
 
 func (m *MyFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	var b *bytes.Buffer
-	if entry.Buffer != nil {
-		b = entry.Buffer
-	} else {
-		b = &bytes.Buffer{}
+	// 获取调用者信息
+	var file string
+	var line int
+	if entry.HasCaller() {
+		file = entry.Caller.File // 只取文件名，不包含路径
+		line = entry.Caller.Line
 	}
-	timestamp := entry.Time.Format("2006/01/02 15:04:05.000")
-	logcontent := fmt.Sprintf("%s [%s] %s\n", timestamp, strings.ToUpper(entry.Level.String()), entry.Message)
-	b.WriteString(logcontent)
-	return b.Bytes(), nil
+
+	msg := fmt.Sprintf("%s [%s] %s:%d - %s\n",
+		entry.Time.Format("2006-01-02 15:04:05.000"),
+		strings.ToUpper(entry.Level.String()),
+		file,
+		line,
+		entry.Message)
+
+	return []byte(msg), nil
 }
 
 func InitLogger(logLevel string) {

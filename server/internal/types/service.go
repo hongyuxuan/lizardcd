@@ -1,17 +1,28 @@
 package types
 
 import (
+	"encoding/json"
+
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/robfig/cron/v3"
 	"github.com/zeromicro/go-zero/zrpc"
+	"k8s.io/client-go/rest"
 )
 
 type RpcAgent struct {
 	Client        lizardagent.LizardAgent
 	ServiceSource string
 	Cli           zrpc.Client
+	Labels        []string
 	Count         int
+}
+
+type K8sConnection struct {
+	K8sService *commonsvc.K8sService
+	RestConfig *rest.Config
+	Labels     []string
 }
 
 type HttpcheckResponse struct {
@@ -43,4 +54,9 @@ type CronData struct {
 	CronId    cron.EntryID
 	HostPort  string
 	Scheduler string
+}
+
+func (t *TektontriggerReq) ToJsonString() string {
+	b, _ := json.MarshalIndent(t, "", "  ")
+	return string(b)
 }

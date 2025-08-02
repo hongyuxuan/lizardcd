@@ -9,22 +9,19 @@ import './assets/css/app.css'
 import './assets/css/style.css'
 import App from './App.vue'
 import router from './router'
-/*** v-md-editor **/
-import VMdPreview from '@kangc/v-md-editor/lib/preview';
-import '@kangc/v-md-editor/lib/style/preview.css';
-import vuepressTheme from '@kangc/v-md-editor/lib/theme/vuepress.js';
-import '@kangc/v-md-editor/lib/theme/style/vuepress.css';
-// Prism
-import Prism from 'prismjs';
-// highlight code
-import 'prismjs/components/prism-json';
+/*** v-md-editor 用于helm charts包的readme展示、tekton pipelinerun的日志展示 **/
+import VMdPreview from '@kangc/v-md-editor/lib/preview'
+import '@kangc/v-md-editor/lib/style/preview.css'
+import githubTheme from '@kangc/v-md-editor/lib/theme/github.js';
+import '@kangc/v-md-editor/lib/theme/style/github.css';
+import hljs from 'highlight.js'
 
 /* 加载 font-awesome */
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {faGears,faCircle,faHouse,faLayerGroup,faSliders,faPlus,faMinus,faCubes,faGhost,faLaptopCode,faRocket,faCircleNodes,faTimeline,faFileCode,faListCheck,faToggleOn,faToggleOff,faPlay,faArrowsRotate,faStop,faShuffle,faShare,faMagnifyingGlass,faNetworkWired,faLaptop} from '@fortawesome/free-solid-svg-icons'
-import {faCircleQuestion as farCircleQuestion,faCircleStop,faCirclePlay} from '@fortawesome/free-regular-svg-icons'
-library.add(faGears,faCircle,faHouse,faLayerGroup,faSliders,faPlus,faMinus,faCubes,faGhost,faLaptopCode,faRocket,farCircleQuestion,faCircleNodes,faTimeline,faFileCode,faListCheck,faToggleOn,faToggleOff,faPlay,faArrowsRotate,faCircleStop,faCirclePlay,faShuffle,faShare,faMagnifyingGlass,faNetworkWired,faLaptop)
+import {faGears,faCircle,faHouse,faLayerGroup,faSliders,faPlus,faMinus,faCubes,faGhost,faLaptopCode,faRocket,faCircleNodes,faTimeline,faFileCode,faListCheck,faToggleOn,faToggleOff,faPlay,faArrowsRotate,faStop,faShuffle,faShare,faMagnifyingGlass,faNetworkWired,faLaptop,faBan,faClockRotateLeft,faSitemap,faFloppyDisk,faDiagramProject,faWifi,faBarsProgress,faWrench,faKey,faUser} from '@fortawesome/free-solid-svg-icons'
+import {faCircleQuestion as farCircleQuestion,faCircleStop} from '@fortawesome/free-regular-svg-icons'
+library.add(faGears,faCircle,faHouse,faLayerGroup,faSliders,faPlus,faMinus,faCubes,faGhost,faLaptopCode,faRocket,farCircleQuestion,faCircleNodes,faTimeline,faFileCode,faListCheck,faToggleOn,faToggleOff,faPlay,faArrowsRotate,faStop,faCircleStop,faShuffle,faShare,faMagnifyingGlass,faNetworkWired,faLaptop,faBan,faClockRotateLeft,faSitemap,faFloppyDisk,faDiagramProject,faWifi,faBarsProgress,faWrench,faKey,faUser)
 
 /* 加载 element-plus */
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
@@ -35,10 +32,13 @@ import myTips from './components/myTips'
 /* 引入store */
 import store from './store'
 
-/* 引入VMdEditor */
-VMdPreview.use(vuepressTheme, {
-  Prism,
-});
+VMdPreview.use(githubTheme, {
+  Hljs: hljs,
+  codeHighlightExtensionMap: {
+    vue: 'html',
+    javascript: 'js'
+  }
+})
 
 const app = createApp(App)
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

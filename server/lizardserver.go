@@ -49,6 +49,7 @@ func main() {
 	kingpin.Version(printVersion())
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
+	fmt.Println(printVersion())
 
 	c := config.NewConfig(
 		configFile,
@@ -74,6 +75,7 @@ func main() {
 
 	ctx := svc.NewServiceContext(c)
 	ctx.SetVersion(AppVersion)
+	defer ctx.LeaderElection.Stop()
 
 	handler.RegisterHandlers(server, ctx)
 
@@ -98,7 +100,10 @@ func main() {
 	if c.Nacos.Address != "" {
 		go handler.StartNacosWatch(ctx)
 	}
+	// periodly fetch agents from db(for manual registry)
+	go handler.WatchAgentManually(ctx)
 
+	// cronjob
 	cronService := svc.NewCronService(context.Background(), ctx)
 	cronService.LoadCronJob()
 

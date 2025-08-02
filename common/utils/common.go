@@ -12,6 +12,7 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/common/constant"
 	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/samber/lo"
 )
 
@@ -21,17 +22,17 @@ func GetLizardAgentKey(key []byte) string {
 	return strings.TrimSuffix(string(key), "/"+uid)
 }
 
-func GetServiceMata(prefix, key string) (map[string]string, error) {
+func GetServiceMata(prefix, key string) (*commontypes.ServiceMeta, error) {
 	re, _ := regexp.Compile(prefix + "lizardcd-agent(_vm|)\\.(.+?)\\.(.+)")
 	res := re.FindStringSubmatch(key)
 	if res == nil {
 		return nil, errorx.NewDefaultError("No match of \"%s\" to <ServicePrefix>.lizardcd-agent(_vm).<namespace>.<cluster>", key)
 	}
-	return map[string]string{
-		"Protocol":  "grpc",
-		"Service":   prefix + "lizardcd-agent" + res[1],
-		"Namespace": res[2],
-		"Cluster":   res[3],
+	return &commontypes.ServiceMeta{
+		Protocol:  "grpc",
+		Service:   prefix + "lizardcd-agent" + res[1],
+		Namespace: res[2],
+		Cluster:   res[3],
 	}, nil
 }
 

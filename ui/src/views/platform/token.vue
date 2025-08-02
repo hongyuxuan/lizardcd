@@ -58,7 +58,15 @@
   <template #default>
     <el-form ref="token" :model="form" :rules="rules" label-width="100px">
       <el-form-item label="选择用户" prop="user_id">
-        <el-select v-model="form.user_id" size="large" clearable value-key="id">
+        <el-select 
+          v-model="form.user_id" 
+          size="large" 
+          clearable 
+          value-key="id"
+          filterable
+          remote
+          reserve-keyword
+          :remote-method="searchUser">
           <el-option v-for="(item,i) in userList" :key="i" :label="item.username" :value="item" />
         </el-select>
       </el-form-item>
@@ -110,7 +118,6 @@ const userList = ref([])
 /* 生命周期函数 */
 onBeforeMount(async () => {
   getList(1)
-  getUserList()
 })
 /* methods */
 const getList = async (page) => {
@@ -120,8 +127,8 @@ const getList = async (page) => {
   list.value = response.results
   pageTotal.value = response.total
 }
-const getUserList = async () => {
-  let response = await axios.get(`/lizardcd/db/user`)
+const searchUser = async (query) => {
+  let response = await axios.get(`/lizardcd/db/user?page=1&size=20&sort=username&search=username==${query}`)
   userList.value = response.results
 }
 const confirmClick = async (f) => {

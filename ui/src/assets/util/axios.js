@@ -29,7 +29,7 @@ axios.interceptors.response.use(
 	async (err) => {
 		if(err.response) {
       if(err.response.status === 401 && !['/lizardcd/auth/login','/lizardcd/auth/chpasswd'].includes(err.response.config.url)) { // 登录失效
-        window.location.href = '/login/'
+        window.location.href = `/login/?redirect=${window.location.href}`
       }
       let err_message = err.response.data ? (err.response.data.message || err.response.data) : err.response.statusText
       ElMessage.error({message: err_message})

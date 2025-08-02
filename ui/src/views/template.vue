@@ -12,12 +12,12 @@
   <el-row>
     <el-alert type="warning" show-icon style="margin-bottom:15px">
       <template #title>
-        关于模板用法参考 Go-template：<el-link href="https://pkg.go.dev/text/template" :underline="false" type="primary" target="_blank">https://pkg.go.dev/text/template</el-link>
+        关于模板用法参考 Go-template：<el-link href="https://pkg.go.dev/text/template" underline="never" type="primary" target="_blank">https://pkg.go.dev/text/template</el-link>
       </template>
     </el-alert>
     <el-col :span="12">
       <el-button-group>
-        <el-button :icon="Refresh" size="large" style="margin-right:5px" @click="getList(current)" />
+        <el-button :icon="Refresh" size="large" @click="getList(current)" />
         <el-input v-model="searchKey" placeholder="输入名称进行搜索" size="large" :prefix-icon="Search" @change="current=1;getList(1)" clearable style="width:300px;" />
       </el-button-group>
     </el-col>
@@ -64,13 +64,13 @@
     @current-change="getList"
     v-model:current-page="current" />
 </el-card>
-<el-drawer v-model="show" direction="rtl" size="700px">
+<el-drawer v-model="show" direction="rtl" size="750px">
   <template #header>
     <h4 v-if="edit===false">新建模板</h4>
     <h4 v-if="edit===true">编辑模板</h4>
   </template>
   <template #default>
-    <el-form ref="template" :model="form" :rules="rules" label-width="120px">
+    <el-form ref="template" :model="form" :rules="rules" label-width="80px">
       <el-form-item label="模板名称" prop="name">
         <el-input v-model="form.name" size="large" />
       </el-form-item>
@@ -84,27 +84,32 @@
         </el-radio-group>
       </el-form-item>
       <el-form-item label="模板定义" prop="content">
+        <el-switch v-model="wrapLine" active-text="自动换行" inactive-text="不自动换行" inline-prompt class="el-switch-hover-right" size="large" />
         <v-ace-editor
           v-model:value="form.content"
           :lang="language"
           theme="chrome"
-          style="width:100%;height:700px"
+          style="width:100%"
           :options="{
+            wrap: wrapLine,
             enableBasicAutocompletion: true,
             enableSnippets: true,
             enableLiveAutocompletion: true,
             tabSize: 2,
             showPrintMargin: false,
-            fontSize: 14
+            fontSize: 14,
+            maxLines: 5000,
+            minLines: 10,
           }" />
       </el-form-item>
       <el-form-item label="模板变量">
         <table class="table table-bordered">
-          <thead><tr><th>变量名</th><th>默认变量值</th></tr></thead>
+          <thead><tr><th>变量名</th><th>默认变量值</th><th>备注</th></tr></thead>
           <tbody>
           <tr v-for="(item,index) in form.variables" :key="index" >
-            <td><el-input v-model="item.key" size="large" /></td>
+            <td ><el-input v-model="item.key" size="large" /></td>
             <td><el-input v-model="item.value" size="large" /></td>
+            <td width="200"><el-input v-model="item.memo" size="large" /></td>
             <td width="80">
               <el-button-group>
                 <el-button icon="Plus" circle @click="addVar(index)"></el-button>
@@ -160,6 +165,7 @@ const rules = reactive({
 })
 const template = ref(null)
 const language = ref("yaml")
+const wrapLine = ref(true)
 /* 生命周期函数 */
 onBeforeMount(async () => {
   getList(1)

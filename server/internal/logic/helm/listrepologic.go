@@ -31,11 +31,11 @@ func (l *ListRepoLogic) ListRepo() (resp *types.Response, err error) {
 	_, role, tenant, _ := utils.GetPayload(l.ctx)
 	var res []*commontypes.HelmRepositories
 	if role != constant.ROLE_ADMIN {
-		if err = l.svcCtx.Sqlite.Where("tenant IN ?", tenant).Find(&res).Error; err != nil {
+		if err = l.svcCtx.Database.Where("tenant IN ?", tenant).Find(&res).Error; err != nil {
 			l.Logger.Error(err)
 			return
 		}
-	} else if err = l.svcCtx.Sqlite.Find(&res).Error; err != nil {
+	} else if err = l.svcCtx.Database.Find(&res).Error; err != nil {
 		l.Logger.Error(err)
 		return
 	}

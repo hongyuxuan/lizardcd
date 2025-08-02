@@ -139,7 +139,7 @@
       <template #default="scope">
         <el-popconfirm title="确定?" confirm-button-text="确认" cancel-button-text="取消" @confirm="submitRollback(scope.row)">
           <template #reference>
-            <el-link type="primary" :underline="false" :disabled="loading.rollback">回滚到此版本</el-link>
+            <el-link type="primary" underline="never" :disabled="loading.rollback">回滚到此版本</el-link>
           </template>
         </el-popconfirm>
       </template>

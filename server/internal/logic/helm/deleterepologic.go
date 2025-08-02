@@ -26,7 +26,7 @@ func NewDeleteRepoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 }
 
 func (l *DeleteRepoLogic) DeleteRepo(req *types.RepoReq) (resp *types.Response, err error) {
-	if err = l.svcCtx.Sqlite.Where("name = ?", req.RepoName).Delete(&commontypes.HelmRepositories{}).Error; err != nil {
+	if err = l.svcCtx.Database.Where("name = ?", req.RepoName).Delete(&commontypes.HelmRepositories{}).Error; err != nil {
 		l.Logger.Error(err)
 		return
 	}

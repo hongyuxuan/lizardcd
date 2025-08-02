@@ -3,9 +3,10 @@ import { createStore } from 'vuex'
 export default createStore({
   state: {
     menuCollpase: false,
-    username: '游客',
-    avatar: '',
-    role: '',
+    userInfo: {
+      username: '游客',
+      profile: {}
+    },
     settings: {},
   },
   modules: {

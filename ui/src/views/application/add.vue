@@ -1,5 +1,5 @@
 <template>
-<el-drawer v-model="show" @opened="afterOpen" direction="rtl" size="700px">
+<el-drawer v-model="show" @opened="afterOpen" direction="rtl" size="750px">
   <template #header>
     <h4 v-if="props.edit">编辑应用</h4>
     <h4 v-else>新增应用</h4>
@@ -11,11 +11,13 @@
         <el-input v-model="form.app_name" size="large" />
       </el-form-item>
       <el-form-item label="部署方式">
-        <el-radio-group v-model="form.deploy_type" @change="selectDeployType">
-          <el-radio value="虚拟机">虚拟机</el-radio>
-          <el-radio value="容器">容器</el-radio>
-          <el-radio value="HTTP">HTTP</el-radio>
-          <el-radio value="GitOps">GitOps</el-radio>
+        <el-radio-group v-model="form.deploy_type" @change="selectDeployType" :disabled="props.edit">
+          <el-radio-button value="虚拟机">虚拟机</el-radio-button>
+          <el-radio-button value="容器">容器</el-radio-button>
+          <el-radio-button value="Docker">Docker</el-radio-button>
+          <el-radio-button value="HTTP">HTTP</el-radio-button>
+          <el-radio-button value="GitOps">GitOps</el-radio-button>
+          <el-radio-button value="SSH">SSH</el-radio-button>
         </el-radio-group>
       </el-form-item>
       <el-form-item label="代码仓库" prop="git_http_url">
@@ -38,7 +40,16 @@
         <el-input v-model="form.image_name" placeholder="请填写" size="large" />
       </el-form-item>
       <el-form-item label="所属租户" prop="tenant">
-        <el-input v-model="form.tenant" disabled size="large" />
+        <el-select 
+          v-model="form.tenant" 
+          placeholder="请选择租户" 
+          clearable 
+          filterable 
+          :disabled="userInfo.role!=='admin'"
+          style="width:100%;" 
+          size="large">
+          <el-option v-for="(item,index) in props.tenantList" :key="index" :label="item" :value="item" />
+        </el-select>
       </el-form-item>
       <el-form-item label="设置标签" prop="tags">
         <el-row v-for="(item,i) in form.tags" :key="i" style="margin-bottom:5px;width:100%">
@@ -50,6 +61,9 @@
         </el-row>
         <el-button circle icon="Plus" @click="addTag" />
       </el-form-item>
+      <el-form-item label="超时时间(秒)" prop="timeout">
+        <el-input type="number" v-model="form.timeout" size="large" style="width:200px" />
+      </el-form-item>
       <el-divider v-if="form.deploy_type!=='GitOps'"><span style="color:#b4b4b4">构建配置</span></el-divider>
       <el-form-item v-if="form.deploy_type!=='GitOps'">
         <template #label><el-text>启用自动构建 
@@ -60,9 +74,9 @@
             <el-icon class="text-yellow"><Warning /></el-icon>
           </el-tooltip></el-text>
         </template>
-        <el-switch v-model="form.enable_build" />
+        <el-switch v-model="form.auto_build.enable" />
       </el-form-item>
-      <el-form-item label="从构建模板导入" prop="template" v-if="form.deploy_type!=='GitOps'&&form.enable_build===true">
+      <el-form-item label="从构建模板导入" prop="template" v-if="form.deploy_type!=='GitOps'&&form.auto_build.enable===true">
         <el-select 
           v-model="form.template" 
           placeholder="请选择模板" 
@@ -75,9 +89,9 @@
           </el-option>
         </el-select>
       </el-form-item>
-      <el-form-item label="构建脚本" prop="build_script" v-if="form.deploy_type!=='GitOps'&&form.enable_build===true">
+      <el-form-item label="构建脚本" prop="build_script" v-if="form.deploy_type!=='GitOps'&&form.auto_build.enable===true">
         <v-ace-editor
-          v-model:value="form.build_script"
+          v-model:value="form.auto_build.build_script"
           lang="yaml"
           theme="chrome"
           style="width:100%;"
@@ -92,8 +106,8 @@
             maxLines: 5000
           }" />
       </el-form-item>
-      <el-form-item label="版本号获取命令" v-if="form.deploy_type!=='GitOps'&&form.enable_build===true">
-        <el-input v-model="form.version_script" size="large" />
+      <el-form-item label="版本号获取命令" v-if="form.deploy_type!=='GitOps'&&form.auto_build.enable===true">
+        <el-input v-model="form.auto_build.version_script" size="large" />
         <myTips type="info">从代码仓库中获取版本号的命令，仅支持单行，如 cat ./VERSION</myTips>
       </el-form-item>
       <el-divider v-if="form.deploy_type==='GitOps'"><span style="color:#b4b4b4">GitOps部署配置</span></el-divider>
@@ -174,17 +188,20 @@
               </el-select>
             </el-form-item>
             <el-form-item label="命名空间">
-              <el-select v-model="m.namespace" clearable placeholder="请选择" size="large" @change="listDeployments(m.cluster,m.namespace,m.workload_type)" style="width:100%">
+              <el-select v-model="m.namespace" clearable placeholder="请选择" size="large" @change="listResource(m.cluster,m.namespace,m.workload_type)" style="width:100%">
                 <el-option v-for="item in props.k8scluster[m.cluster]" :key="item" :label="item" :value="item" />
               </el-select>
             </el-form-item>
             <el-form-item label="工作负载类型" v-if="form.deploy_type==='容器'">
-              <el-radio-group v-model="m.workload_type" @change="listDeployments(m.cluster,m.namespace,m.workload_type)">
-                <el-radio label="deployments" value="deployments" />
-                <el-radio label="statefulsets" value="statefulsets" />
+              <el-radio-group v-model="m.workload_type" @change="listResource(m.cluster,m.namespace,m.workload_type)">
+                <el-radio-button label="deployments" value="deployments" />
+                <el-radio-button label="statefulsets" value="statefulsets" />
+                <el-radio-button label="jobs" value="jobs" />
+                <el-radio-button label="cronjobs" value="cronjobs" />
+                <el-radio-button label="yaml" value="yaml" />
               </el-radio-group>
             </el-form-item>
-            <el-form-item label="工作负载名称" v-if="form.deploy_type==='容器'">
+            <el-form-item label="工作负载名称" v-if="form.deploy_type==='容器'&&m.workload_type!=='yaml'">
               <el-select 
                 v-model="m.workload_name" 
                 placeholder="请选择工作负载" 
@@ -196,7 +213,7 @@
                 <el-option v-for="item in deploymentList[`${m.cluster}#${m.namespace}`]" :key="item" :label="item" :value="item" />
               </el-select>
             </el-form-item>
-            <el-form-item label="容器名称" v-if="form.deploy_type==='容器'">
+            <el-form-item label="容器名称" v-if="form.deploy_type==='容器'&&m.workload_type!=='yaml'">
               <el-select 
                 v-model="m.container_name" 
                 placeholder="请选择容器" 
@@ -251,14 +268,33 @@
           </el-tooltip>
         </el-row>
       </el-form-item>
-      <el-divider v-if="form.deploy_type==='虚拟机'"><span style="color:#b4b4b4">虚拟机部署配置</span></el-divider>
-      <el-form-item label="部署路径" prop="deploy_path" v-if="form.deploy_type==='虚拟机'">
+      <el-divider v-if="['虚拟机','SSH'].includes(form.deploy_type)"><span style="color:#b4b4b4">虚拟机/SSH部署配置</span></el-divider>
+      <el-form-item label="SSH端口" prop="ssh_port" v-if="form.deploy_type==='SSH'">
+        <el-input v-model="form.extra_vars.ssh_port" size="large" />
+      </el-form-item>
+      <el-form-item label="SSH用户" prop="ssh_user" v-if="form.deploy_type==='SSH'">
+        <el-input v-model="form.extra_vars.ssh_user" size="large" />
+      </el-form-item>
+      <el-form-item label="SSH密码" prop="ssh_pass" v-if="form.deploy_type==='SSH'">
+        <el-input v-model="form.extra_vars.ssh_pass" size="large" type="password" />
+      </el-form-item>
+      <el-form-item label="SSH私钥" prop="ssh_private_key" v-if="form.deploy_type==='SSH'&&edit===false">
+        <el-input v-model="form.extra_vars.ssh_private_key" size="large" type="textarea" :autosize="{minRows:5}"/>
+      </el-form-item>
+      <el-form-item label="部署路径" prop="deploy_path" v-if="['虚拟机','SSH'].includes(form.deploy_type)">
         <el-input v-model="form.extra_vars.deploy_path" size="large" />
       </el-form-item>
       <el-form-item label="部署用户" prop="deploy_user" v-if="form.deploy_type==='虚拟机'">
         <el-input v-model="form.extra_vars.deploy_user" size="large" />
       </el-form-item>
-      <el-form-item label="部署前命令/脚本" v-if="form.deploy_type==='虚拟机'">
+      <el-form-item label="脚本类型" v-if="['虚拟机','SSH'].includes(form.deploy_type)">
+        <el-radio-group v-model="form.extra_vars.command_type">
+          <el-radio value="shell">shell</el-radio>
+          <el-radio value="bat">windows bat</el-radio>
+          <el-radio value="ps1">windows powershell</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="部署前命令/脚本" v-if="['虚拟机','SSH'].includes(form.deploy_type)">
         <v-ace-editor
           v-model:value="form.extra_vars.pre_command"
           lang="yaml"
@@ -277,7 +313,7 @@
           }" />
         <myTips type="info">通常可执行停止服务、清理旧版本等操作</myTips>
       </el-form-item>
-      <el-form-item label="启动命令/脚本" prop="start_command" v-if="form.deploy_type==='虚拟机'">
+      <el-form-item label="启动命令/脚本" prop="start_command" v-if="['虚拟机','SSH'].includes(form.deploy_type)">
         <v-ace-editor
           v-model:value="form.extra_vars.start_command"
           lang="yaml"
@@ -295,8 +331,8 @@
             wrap: true
           }" />
       </el-form-item>
-      <el-divider v-if="form.deploy_type==='虚拟机'"><span style="color:#b4b4b4">健康检查配置</span></el-divider>
-      <el-form-item label="健康检查方式" v-if="form.deploy_type==='虚拟机'&&form.extra_vars.health_check">
+      <el-divider v-if="['虚拟机','SSH'].includes(form.deploy_type)"><span style="color:#b4b4b4">健康检查配置</span></el-divider>
+      <el-form-item label="健康检查方式" v-if="['虚拟机','SSH'].includes(form.deploy_type)&&form.extra_vars.health_check">
         <el-radio-group v-model="form.extra_vars.health_check.type">
           <el-radio value="none">无</el-radio>
           <el-radio value="http">HTTP</el-radio>
@@ -305,9 +341,9 @@
         </el-radio-group>
         <myTips type="info">如开启健康检查，则检查通过才表示部署成功</myTips>
       </el-form-item>
-      <el-form-item label="健康检查内容" v-if="form.deploy_type==='虚拟机'&&form.extra_vars.health_check?.type!=='none'">
-        <myTips type="info" v-if="form.deploy_type==='虚拟机'&&form.extra_vars.health_check?.type==='http'">返回200OK表示健康检查通过</myTips>
-        <table class="table table-bordered" v-if="form.deploy_type==='虚拟机'&&form.extra_vars.health_check?.type==='http'">
+      <el-form-item label="健康检查内容" v-if="['虚拟机','SSH'].includes(form.deploy_type)&&form.extra_vars.health_check?.type!=='none'">
+        <myTips type="info" v-if="['虚拟机','SSH'].includes(form.deploy_type)&&form.extra_vars.health_check?.type==='http'">返回200OK表示健康检查通过</myTips>
+        <table class="table table-bordered" v-if="['虚拟机','SSH'].includes(form.deploy_type)&&form.extra_vars.health_check?.type==='http'">
           <tbody>
           <tr>
             <td width="80">Method</td>
@@ -328,9 +364,9 @@
           </tr>
           </tbody>
         </table>
-        <myTips type="info" v-if="form.deploy_type==='虚拟机'&&form.extra_vars.health_check?.type==='shell'">脚本返回值为0表示健康检查通过</myTips>
+        <myTips type="info" v-if="['虚拟机','SSH'].includes(form.deploy_type)&&form.extra_vars.health_check?.type==='shell'">脚本返回值为0表示健康检查通过</myTips>
         <v-ace-editor
-          v-if="form.deploy_type==='虚拟机'&&form.extra_vars.health_check?.type==='shell'"
+          v-if="['虚拟机','SSH'].includes(form.deploy_type)&&form.extra_vars.health_check?.type==='shell'"
           v-model:value="form.extra_vars.health_check.shell"
           lang="yaml"
           theme="chrome"
@@ -346,7 +382,7 @@
             maxLines: 50,
             wrap: true
           }" />
-        <table class="table table-bordered" v-if="form.deploy_type==='虚拟机'&&form.extra_vars.health_check?.type==='tcp'">
+        <table class="table table-bordered" v-if="['虚拟机','SSH'].includes(form.deploy_type)&&form.extra_vars.health_check?.type==='tcp'">
           <tbody>
           <tr>
             <td>Port</td>
@@ -355,10 +391,77 @@
           </tbody>
         </table>
       </el-form-item>
-      <el-form-item label="目标服务器" v-if="form.deploy_type==='虚拟机'">
-        <el-select v-model="form.targets" placeholder="请选择" clearable filterable multiple size="large" style="width:100%">
-          <el-option v-for="item in targetList" :key="item" :label="item" :value="item" />
+      <el-divider v-if="form.deploy_type==='Docker'"><span style="color:#b4b4b4">Docker部署配置</span></el-divider>
+      <el-form-item label="容器名" prop="container_name" v-if="form.deploy_type==='Docker'">
+        <el-input v-model="form.extra_vars.container_name" size="large" />
+      </el-form-item>
+      <el-form-item label="端口映射" prop="ports" v-if="form.deploy_type==='Docker'">
+        <el-input v-model="form.extra_vars.ports" size="large" placeholder="例如：80:8080,90:9090，多个端口用逗号隔开" />
+      </el-form-item>
+      <el-form-item label="卷绑定" prop="volumes" v-if="form.deploy_type==='Docker'">
+        <el-input v-model="form.extra_vars.volumes" size="large" placeholder="例如：/data/volume1:/volume1，多个卷用逗号隔开" />
+      </el-form-item>
+      <el-form-item label="Network" prop="network" v-if="form.deploy_type==='Docker'">
+        <el-input v-model="form.extra_vars.network" size="large" placeholder="网络方式，如使用本地网络，则填写 host" />
+      </el-form-item>
+      <el-form-item label="DNS" prop="dns" v-if="form.deploy_type==='Docker'">
+        <el-input v-model="form.extra_vars.dns" size="large" placeholder="多个dns用逗号隔开" />
+      </el-form-item>
+      <el-form-item label="WorkingDir" prop="working_dir" v-if="form.deploy_type==='Docker'">
+        <el-input v-model="form.extra_vars.working_dir" size="large" />
+      </el-form-item>
+      <el-form-item label="启动参数" prop="command" v-if="form.deploy_type==='Docker'">
+        <el-input v-model="form.extra_vars.command" size="large" placeholder='数组形式，如 ["ls", "/tmp"]' />
+      </el-form-item>
+      <el-form-item label="目标服务器" v-if="['虚拟机','Docker'].includes(form.deploy_type)">
+        <el-select v-model="form.targets" placeholder="请选择" clearable filterable multiple size="large" value-key="ip" style="width:100%">
+          <el-option v-for="item in targetList" :key="item" :label="item.ip" :value="item">
+            <span style="float:left">{{item.ip}}</span>
+            <span style="float:right;color:var(--el-text-color-secondary);font-size:12px" v-if="item.labels">
+              <el-tag v-for="label in item.labels" :key="label" size="small">{{ label }}</el-tag>
+            </span>
+          </el-option>
         </el-select>
+      </el-form-item>
+      <el-form-item label="目标服务器" v-if="form.deploy_type==='SSH'">
+        <el-card v-for="(m,index) in form.workload" :key="index" style="width:100%">
+          <template #header>
+            <div class="card-header">
+              <span>目标服务器 {{ index+1 }}</span>
+              <div class="box-tools pull-right">
+                <span class="card-header-btn" @click="copyWorkload(index)"><el-icon><CopyDocument /></el-icon></span>
+                <span class="card-header-btn" @click="removeWorkload(index)"><el-icon><Close /></el-icon></span>
+              </div>
+            </div>
+          </template>
+          <el-form label-width="70px">
+            <el-form-item label="服务器IP">
+              <el-input v-model="m.workload_name" size="large" />
+            </el-form-item>
+            <el-form-item label="设置标签" prop="labels">
+              <el-row v-for="(item,i) in m.labels" :key="i" style="margin-bottom:5px;width:100%">
+                <el-button-group>
+                  <el-input v-model="item.key" size="large" clearable style="width:175px;margin-right:5px" />
+                  <el-input v-model="item.value" size="large" clearable style="width:175px;" />
+                  <el-button circle :icon="Delete" size="large" style="float:right" @click="m.labels.splice(i, 1)" />
+                </el-button-group>
+              </el-row>
+              <el-button circle icon="Plus" @click="m.labels.push({key: '', value: ''})" />
+            </el-form-item>
+            <el-form-item label="是否启用">
+              <el-switch v-model="m.enable" />
+            </el-form-item>
+          </el-form>
+        </el-card>
+        <el-row>
+          <el-button icon="Plus" circle @click="addWorkload" />
+          <el-tooltip content="全部启用">
+            <el-button circle @click="setWorkloadEnable(form,true)"><font-awesome-icon icon="toggle-on" /></el-button>
+          </el-tooltip>
+          <el-tooltip content="全部停用">
+            <el-button circle @click="setWorkloadEnable(form,false)"><font-awesome-icon icon="toggle-off" /></el-button>
+          </el-tooltip>
+        </el-row>
       </el-form-item>
       <el-divider v-if="form.deploy_type==='HTTP'"><span style="color:#b4b4b4">HTTP部署配置</span></el-divider>
       <el-form-item label="Base URL" v-if="form.deploy_type==='HTTP'">
@@ -461,12 +564,13 @@
 </template>
 <script setup>
 import { Warning,CopyDocument,Close,Delete } from '@element-plus/icons-vue'
-import { onBeforeMount, ref, reactive } from 'vue'
+import { onBeforeMount, ref, reactive, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
 import { ElMessage } from 'element-plus'
-import newWorkload from '/src/views/workload/new.vue'
+import newWorkload from '/src/views/kubernetes/new.vue'
 import MyTips from '/src/components/myTips/myTips.vue'
 import { axios } from '/src/assets/util/axios'
-import { getImageBase } from '@/assets/util/common'
+import { getImageBase, parseLabels } from '@/assets/util/common'
 import _ from 'lodash'
 import moment from 'moment'
 /* 引入v-ace-editor */
@@ -479,12 +583,17 @@ import 'ace-builds/src-noconflict/ext-language_tools'
 const props = defineProps({
   form: { type: Object }, 
   k8scluster: { type: Object },
+  repoList: { type: Array },
+  tenantList: { type: Array },
   edit: { type: Boolean },
+})
+const store = useStore()
+const userInfo = computed(() => {
+  return store.state.userInfo
 })
 const tenant = localStorage.tenant.split(",")[0]
 const show = ref(false)
-const form = ref({})
-const repoList = ref([])
+const form = ref({auto_build:{}})
 const rules = reactive({
   app_name: [{required: true, message: '请填写应用名称'}],
   git_http_url: [{ validator: (rule, value, callback) => {
@@ -514,12 +623,6 @@ onBeforeMount(async () => {
   getSettings()
 })
 /* methods */
-const getRepoList = async () => {
-  let response = await axios.get(`/lizardcd/db/image_repository?size=100`)
-  repoList.value = _.uniqBy(response.results, (item) => {
-    return `${item.repo_account}-${item.repo_url}`
-  })
-}
 const getTemlates = async () => {
   let response = await axios.get(`/lizardcd/db/yaml_template?search=type==tekton_&page=1&size=100&sort=update_at desc`)
   templateList.value = response.results.map(x => {
@@ -533,21 +636,25 @@ const getSettings = async () => {
     defaultTekton.value = JSON.parse(response.results[0].setting_value)
     if(defaultTekton.value.cluster&&defaultTekton.value.namespace) {
       response = await axios.get(`/lizardcd/tekton/cluster/${defaultTekton.value.cluster}/namespace/${defaultTekton.value.namespace}/eventlisteners`)
-      let el = response.find(n => n.metadata.name === 'default-eventlistener')
+      let el = response.results.find(n => n.metadata.name === 'default-eventlistener')
       defaultTekton.value.trigger_endpoint = el?.metadata?.annotations?.endpoint
     }
   }
 }
-const listDeployments = async (cluster, namespace, workload_type) => {
-  if(cluster && namespace) {
+const listResource = async (cluster, namespace, workload_type) => {
+  if(cluster && namespace && workload_type !== 'yaml') {
     let response = await axios.get(`/lizardcd/kubernetes/cluster/${cluster}/namespace/${namespace}/${workload_type}`)
-    deploymentList.value[`${cluster}#${namespace}`] = response.map(x => x.metadata.name)
+    deploymentList.value[`${cluster}#${namespace}`] = response.results.map(x => x.metadata.name)
   }
 }
 const listContainers = async (cluster, namespace, workload_type, workload_name) => {
-  if(cluster && namespace && workload_name) {
+  if(cluster && namespace && workload_name && workload_type !== 'yaml') {
     let response = await axios.get(`/lizardcd/kubernetes/cluster/${cluster}/namespace/${namespace}/${workload_type}/${workload_name}`)
-    containerList.value[`${cluster}#${namespace}#${workload_name}`] = response.spec.template.spec.containers.map(x => x.name).concat(response.spec.template.spec.initContainers?.map(x => x.name)||[])
+    if(workload_type === 'cronjobs') {
+      containerList.value[`${cluster}#${namespace}#${workload_name}`] = response.spec.jobTemplate.spec.template.spec.containers.map(x => x.name).concat(response.spec.jobTemplate.spec.template.spec.initContainers?.map(x => x.name)||[])
+    } else {
+      containerList.value[`${cluster}#${namespace}#${workload_name}`] = response.spec.template.spec.containers.map(x => x.name).concat(response.spec.template.spec.initContainers?.map(x => x.name)||[])
+    }
   }
 }
 const getTargets = async () => {
@@ -566,11 +673,13 @@ const selectDeployType = (val) => {
   }
 }
 const afterOpen = async () => {
-  await getRepoList()
   await getTemlates()
   await getTargets()
   if(props.form?.id) {
-    form.value = Object.assign({}, props.form)
+    form.value = _.cloneDeep(props.form)
+    form.value.auto_build ||= {enable: false,build_script:'',version_script:''}
+    form.value.timeout ||= 300
+    form.value.template = templateList.value.find(n => n.id === form.value.auto_build?.template_id)
   } else {
     form.value = {
       workload: [],
@@ -580,30 +689,46 @@ const afterOpen = async () => {
       tags: [],
       deploy_type: '容器',
       targets: [],
-      extra_vars: {health_check:{type:'none'},pre_command:'',start_command:''},build_script:''
+      extra_vars: {health_check:{type:'none'},command_type:'shell',pre_command:'',start_command:''},
+      auto_build: {enable: false,build_script:'',version_script:''},
+      timeout: 300
     }
   }
   form.value.tenant ||= localStorage.tenant
-  form.value.repo = repoList.value.find(n => n.id === form.value.repo_id)
+  form.value.repo = props.repoList.find(n => n.id === form.value.repo_id)
   if(form.value.template?.id === 0) form.value.template = undefined
-  form.value.build_script ||= ''
   let tags = []
   for (let tag of form.value.tags||[]) {
-    let arr = tag.split(":")
+    let arr = tag.replace(":", "=").split("=")
     tags.push({key: arr[0].trim(), value: arr[1].trim()})
   }
   form.value.tags = tags
   for(let w of form.value.workload) {
     w.headers ||= []
     if(!deploymentList.value.hasOwnProperty(`${w.cluster}#${w.namespace}`)) {
-      listDeployments(w.cluster, w.namespace, w.workload_type)
+      listResource(w.cluster, w.namespace, w.workload_type)
     }
     if(!containerList.value.hasOwnProperty(`${w.cluster}#${w.namespace}${w.workload_name}`)) {
       listContainers(w.cluster, w.namespace, w.workload_type, w.workload_name)
     }
   }
-  if(form.value.deploy_type === '虚拟机') {
-    form.value.targets = form.value.workload.map(x => x.workload_name)
+  if(['虚拟机','Docker'].includes(form.value.deploy_type)) {
+    form.value.targets = form.value.workload.map(x => { 
+      return { ip: x.workload_name, labels: x.labels}
+    })
+    try {
+      form.value.extra_vars = await JSON.parse(form.value.extra_vars)
+      form.value.extra_vars.health_check ||= {type:'none',method:'get',shell:''}
+    }
+    catch(e) {
+      form.value.extra_vars = {}
+      form.value.extra_vars.health_check = {}
+    }
+  }
+  if(form.value.deploy_type === 'SSH') {
+    for(let x of form.value.workload) {
+      x.labels = parseLabels(x.labels)
+    }
     try {
       form.value.extra_vars = await JSON.parse(form.value.extra_vars)
       form.value.extra_vars.health_check ||= {type:'none',method:'get',shell:''}
@@ -622,10 +747,12 @@ const afterOpen = async () => {
     form.value.extra_vars.http_header = headers.join(",")
   }
   // 获取faas
-  let response = await axios.get(`/lizardcd/db/application_faas?filter=application_id==${form.value.id}`)
-  if(response.total > 0) {
-    form.value.enable_faas = true
-    form.value.faas = response.results[0]
+  if(form.value.id) {
+    let response = await axios.get(`/lizardcd/db/application_faas?filter=application_id==${form.value.id}`)
+    if(response.total > 0) {
+      form.value.enable_faas = true
+      form.value.faas = response.results[0]
+    }
   }
 }
 const addTag = () => {
@@ -643,6 +770,7 @@ const addWorkload = () => {
     container_name: '',
     weight: 50,
     headers: [],
+    labels: [],
     enable: true
   })
 }
@@ -673,18 +801,30 @@ const confirmClick = async (f) => {
   if(!f) return
   await f.validate(async (valid) => {
     if(valid) {
-      let params = Object.assign({}, form.value)
+      let params = _.cloneDeep(form.value)
       params.update_at = moment()
+      params.timeout = parseInt(params.timeout)
       params.repo_id = params.repo?.id
-      params.template_id = params.template?.id
+      params.auto_build.template_id = params.template?.id
       delete params.repo
       delete params.template
-      params.tags = params.tags.map(x => `${x.key}:${x.value}`)
-      if(params.deploy_type === '虚拟机') {
+      params.tags = params.tags.map(x => `${x.key}=${x.value}`)
+      if(['虚拟机','Docker'].includes(params.deploy_type)) {
         params.workload = params.targets.map(x => {
           return {
             workload_type: "vm",
-            workload_name: x,
+            workload_name: x.ip,
+            labels: x.labels,
+            enable: true
+          }
+        })
+        params.extra_vars = JSON.stringify(params.extra_vars)
+      } else if (params.deploy_type === 'SSH') {
+        params.workload = params.workload.map(x => {
+          return {
+            workload_type: "ssh",
+            workload_name: x.workload_name,
+            labels: x.labels.map(y => `${y.key}=${y.value}`),
             enable: true
           }
         })
@@ -744,7 +884,7 @@ const confirmClick = async (f) => {
           })
         }
       }
-      else {
+      else {  // 编辑应用
         delete params.faas
         await axios.put(`/lizardcd/db/application/${params.id}`, {body:params})
         if(enable_faas === true) {
@@ -767,8 +907,8 @@ const confirmClick = async (f) => {
           await axios.delete(`/lizardcd/db/application_faas/${form.value.faas.id}`)
         }
       }
-      if(form.value.enable_build) {
-        await applyTektonCRD(form.value)
+      if(form.value.auto_build.enable) {
+        await applyTektonCRD(params, form.value.template.content)
       }
       show.value = false
       loading.value.add = false
@@ -776,35 +916,39 @@ const confirmClick = async (f) => {
     }
   })
 }
-const applyTektonCRD = async (params) => {
+const applyTektonCRD = async (params, template_content) => {
   // 创建 build task
-  let success = true
-  try {
-    await axios.delete(`/lizardcd/tekton/cluster/${defaultTekton.value.cluster}/namespace/${defaultTekton.value.namespace}/tasks/${params.app_name}-build-task`)
-  } catch(e) {
-    success = false
-  }
-  finally {
-    let scripts = params.build_script.split('\n')
+  let scripts = []
+  if(params.auto_build.build_script) {
+    scripts = params.auto_build.build_script.split('\n')
     for(let i=0; i < scripts.length; i++){
       if(i != 0) {
         scripts[i] = '      ' + scripts[i]
       }
     }
+  }
+  try {
     await axios.post(`/lizardcd/tekton/cluster/${defaultTekton.value.cluster}/namespace/${defaultTekton.value.namespace}/apply?kind=Task`, {
-      content: params.template.content,
+      content: template_content,
       variables: {
         Appname: params.app_name,
         BuildScript: scripts.join('\n'),
-        VersionScript: params.version_script || undefined,
+        VersionScript: params.auto_build.version_script || undefined,
         Username: localStorage.username
       }
     })
-    ElMessage.success({message: `${success?'更新':'创建'}自动构建Task成功`})
+    ElMessage.success({message: `创建/更新自动构建Task成功`})
+  } catch(e) {
+    ElMessage.error({message: `创建/更新自动构建Task失败: ${e}`})
+    return Promise.reject()
   }
   // 创建 pipeline
   try {
     let template = templateList.value.find(n => n.name === 'tekton_template_pipeline')
+    if(!template) {
+      ElMessage.warning({message: `未找到模板: tekton_template_pipeline`})
+      return Promise.reject()
+    }
     await axios.post(`/lizardcd/tekton/cluster/${defaultTekton.value.cluster}/namespace/${defaultTekton.value.namespace}/apply?kind=Pipeline`, {
       content: template.content,
       variables: {
@@ -814,8 +958,11 @@ const applyTektonCRD = async (params) => {
         Username: localStorage.username
       }
     })
-    ElMessage.success({message: `创建自动构建Pipeline成功`})
-  } catch(e){console.warn(e)}
+    ElMessage.success({message: `创建/更新自动构建Pipeline成功`})
+  } catch(e) {
+    ElMessage.error({message: `创建/更新自动构建Pipeline失败: ${e}`})
+    return Promise.reject()
+  }
   // 创建 trigger
   let response = await axios.get(`/lizardcd/db/ci_trigger?filter=app_id==${params.id}`)
   if(response.total === 0) {
@@ -823,14 +970,14 @@ const applyTektonCRD = async (params) => {
       app_id: params.id,
       trigger_name: params.app_name,
       git_http_url: params.git_http_url,
-      trigger_body: `{"app_name":"{{ .Appname }}","ref": "{{ .Ref }}","git_ssh_url":"{{ .GitSSHUrl }}"}`,
-      trigger_endpoint: defaultTekton.value.trigger_endpoint,
       trigger_path: [""],
-      trigger_type: "Tekton",
+      trigger_type: "pipelinerun",
+      ref_pattern: ".*",
+      match_labels: params.tags,
+      trigger_event: "push,merge_request",
       tenant,
       update_at: moment()
     }})
-    
   }
 }
 const checkDs = async (val) => {

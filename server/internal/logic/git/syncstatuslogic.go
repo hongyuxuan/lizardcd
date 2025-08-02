@@ -63,7 +63,7 @@ func (l *SyncstatusLogic) Syncstatus(req *types.SyncStatusReq) (resp *types.Resp
 
 func (l *SyncstatusLogic) getSyncStatus(appName, tenant string, ch chan *types.SyncStatus, wg *sync.WaitGroup) {
 	var application commontypes.Application
-	if err := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).
+	if err := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).
 		First(&application, "app_name = ?", appName).Error; err != nil {
 		l.Logger.Error(err)
 		ch <- &types.SyncStatus{Failed: true}
@@ -109,7 +109,7 @@ func (l *SyncstatusLogic) getSyncStatus(appName, tenant string, ch chan *types.S
 	}
 	// 获取工作负载同步状态
 	var appResource []commontypes.ApplicationResource
-	if err = l.svcCtx.Sqlite.Model(&commontypes.ApplicationResource{}).
+	if err = l.svcCtx.Database.Model(&commontypes.ApplicationResource{}).
 		Where("application_id = ?", application.Id).
 		Find(&appResource).Error; err != nil {
 		l.Logger.Error(err)

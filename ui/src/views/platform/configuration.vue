@@ -63,7 +63,7 @@ import token from './token.vue'
 /* 变量定义 */
 const store = useStore()
 const role = computed(() => {
-  return store.state.role
+  return store.state.userInfo.role
 })
 const activeName = ref("1")
 const info = ref("配置页面为您提供 Lizardcd 平台的通用设置，包括参数设置、镜像仓库、用户设置、租户设置等。<br>部分功能仅管理员有权限设置。如有问题，请联系您的管理员。")

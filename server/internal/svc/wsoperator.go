@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -30,25 +30,28 @@ func (ws *WsOperator) GetPodLogs(msg types.WsMessage) {
 	container := msg.MessageData["container"].(string)
 	lines := msg.MessageData["lines"].(float64)
 	follow := msg.MessageData["follow"].(bool)
-	var ag lizardagent.LizardAgent
-	var err error
-	if ag, err = ws.svcCtx.GetAgent(cluster, namespace); err != nil {
+	ag, ks, err := ws.svcCtx.GetAgent(cluster, namespace)
+	if err != nil {
 		return
 	}
 	if follow {
 		var ctx context.Context
 		ctx, ws.cancel = context.WithCancel(context.Background())
-		stream, e := ag.GetPodLogFollow(ctx, &agent.PodLogRequest{
-			Namespace:     namespace,
-			Podname:       podname,
-			ContainerName: container,
-			Lines:         uint64(lines),
-		})
-		if e != nil {
-			ws.Logger.Error(err)
-			return
+		if ag != nil {
+			stream, e := ag.GetPodLogFollow(ctx, &agent.PodLogRequest{
+				Namespace:     namespace,
+				Podname:       podname,
+				ContainerName: container,
+				Lines:         uint64(lines),
+			})
+			if e != nil {
+				ws.Logger.Error(err)
+				return
+			}
+			go ws.recvPodLogs(stream, msg)
+		} else if ks != nil && ks.IsValid() {
+			go ws.recvPodLogsFromK8S(ks, namespace, podname, container, int64(lines), follow, msg)
 		}
-		go ws.recvPodLogs(stream, msg)
 	} else if ws.cancel != nil {
 		ws.cancel()
 	}
@@ -78,4 +81,17 @@ func (ws *WsOperator) recvPodLogs(stream agent.LizardAgent_GetPodLogFollowClient
 			},
 		}
 	}
+}
+
+func (ws *WsOperator) recvPodLogsFromK8S(ks *commonsvc.K8sService, namespace, podname, containerName string, lines int64, follow bool, msg types.WsMessage) {
+	ks.GetPodLog(namespace, podname, containerName, lines, follow, true, nil, func(b []byte) {
+		ws.Logger.Debug("----->", string(b))
+		ws.svcCtx.Hub.broadcast <- types.WsMessage{
+			MessageType: msg.MessageType,
+			MessageTo:   msg.MessageTo,
+			MessageData: map[string]interface{}{
+				"content": string(b),
+			},
+		}
+	})
 }

@@ -39,12 +39,12 @@ var listCmd = &cobra.Command{
 		table.SetAutoWrapText(false)
 
 		var res *types.StatefulsetRes
-		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/statefulsets", cluster, namespace)).SetResult(&res).Do(context.Background()).Err; err != nil {
+		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/statefulsets", cluster, namespace)).SetSuccessResult(&res).Do(context.Background()).Err; err != nil {
 			common.PrintFatal("failed to get statefulset list of cluster=%s, namespace=%s: %v", cluster, namespace, err)
 		}
 
 		var data [][]string
-		for _, d := range res.Data {
+		for _, d := range res.Data.Results {
 			var state string = ""
 			if d.Status.Replicas == 0 {
 				state = "stopped"

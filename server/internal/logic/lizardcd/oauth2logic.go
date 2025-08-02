@@ -27,7 +27,7 @@ func NewOauth2Logic(ctx context.Context, svcCtx *svc.ServiceContext) *Oauth2Logi
 
 func (l *Oauth2Logic) Oauth2() (resp *types.Response, err error) {
 	var oauth2 []commontypes.Oauth2
-	if err = l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListOauth2")).Find(&oauth2).Error; err != nil {
+	if err = l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListOauth2")).Find(&oauth2).Error; err != nil {
 		l.Logger.Error(err)
 		return
 	}

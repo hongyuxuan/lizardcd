@@ -39,12 +39,12 @@ var listCmd = &cobra.Command{
 		table.SetAutoWrapText(false)
 
 		var res *types.DeploymentRes
-		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/deployments", cluster, namespace)).SetResult(&res).Do(context.Background()).Err; err != nil {
+		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/kubernetes/cluster/%s/namespace/%s/deployments", cluster, namespace)).SetSuccessResult(&res).Do(context.Background()).Err; err != nil {
 			common.PrintFatal("failed to get deployment list of cluster=%s, namespace=%s: %v", cluster, namespace, err)
 		}
 
 		var data [][]string
-		for _, d := range res.Data {
+		for _, d := range res.Data.Results {
 			var lastUpdateTime string
 			progress, ok := lo.Find(d.Status.Conditions, func(cond v1.DeploymentCondition) bool {
 				return cond.Type == "Progressing"

@@ -1,4 +1,4 @@
-div:not(.el-step__icon):not(.el-slider__button):not(.el-progress-bar__inner):not(.el-switch__action):not(.el-timeline *):not(.el-backtop),
+div:not(.el-step__icon):not(.el-slider__button):not(.el-progress-bar__inner):not(.el-switch__action):not(.el-timeline *):not(.el-backtop):not(.task-node):not(.custom-handle),
 span.el-checkbox__inner,
 input,select, textarea,
 img:not(.img-circle),
@@ -21,6 +21,12 @@ ul, li, label, pre, form,
   border-right: none !important;
 }
 
+.el-menu--vertical .el-menu-item.is-active,
+.el-menu--vertical .el-sub-menu.is-opened > .el-sub-menu__title
+{
+  border-inline-start: 3px solid #409EFF;
+}
+
 .el-menu-item > a {
   display: block;
   color: inherit !important;
@@ -41,6 +47,7 @@ ul, li, label, pre, form,
 .card-header .box-tools {
   position: absolute;
   right: 0px;
+  top: 5px;
 }
 .card-header-btn {
   padding: 5px;
@@ -63,7 +70,7 @@ ul:not(.el-upload-list) {
 .el-breadcrumb {
   background-color: #fff;
   padding: 10px 20px;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .card .card-icon {
@@ -186,6 +193,13 @@ ul:not(.el-upload-list) {
 .el-descriptions__label {
   color: #8d8c8c !important;
 }
+.el-descriptions.no-color .el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell {
+  border: none !important;
+}
+.el-descriptions.no-color .el-descriptions__label.el-descriptions__cell.is-bordered-label {
+  background: none !important;
+  font-weight: normal !important;
+}
 
 .el-dialog__body {
   padding-top: 15px !important;
@@ -235,10 +249,20 @@ ul:not(.el-upload-list) {
   font-size: 15px;
 }
 
+.el-table.thead-line-height40 thead .el-table__cell {
+  line-height: 40px;
+}
 .el-table.line-height40 .el-table__cell {
   line-height: 40px;
 }
-.el-table.line-height25 .el-table__cell {
+/* .el-table.line-height40 .el-table__cell .cell {
+  line-height: 40px;
+} */
+.el-table.line-height25 thead .el-table__cell {
+  padding: 12px 0 !important;
+  line-height: 40px;
+}
+.el-table.line-height25 tbody .el-table__cell {
   padding: 12px 0 !important;
   line-height: 25px;
 }
@@ -246,6 +270,8 @@ ul:not(.el-upload-list) {
   line-height: inherit;
 }
 .el-table .el-table__cell .cell .cell-comment {
+  display: flex;
+  align-items: center;
   padding-top: 5px;
 }
 .el-table .cell > .el-icon {
@@ -294,6 +320,16 @@ ul:not(.el-upload-list) {
   margin-bottom: 15px;
 }
 
+.header-height-60 {
+  height: 60px;
+  line-height: 18px;
+}
+.header-height-50 {
+  padding: 5px 18px;
+  height: 50px;
+  line-height: 30px;
+}
+
 .statistic .el-col {
   text-align: center;
 }
@@ -323,7 +359,7 @@ ul:not(.el-upload-list) {
   padding: 10px 15px !important;
 }
 
-.el-form-item .el-card__body {
+.div:not(.nobox) .el-form-item .el-card__body {
   padding-bottom: 10px !important;
 }
 
@@ -379,17 +415,103 @@ ul:not(.el-upload-list) {
 pre.dark {
   background-color: var(--el-text-color-primary);
   color: #e9e7e7;
-  padding: 0 25px;
-  min-height:calc(100vh - 90px);
+  padding: 0px 25px;
+  line-height: 1.1;
+  border: none;
 }
 
 pre p {
   margin: 0;
-  word-break:break-all;
-  line-height: 22px;
+  line-height: 18px;
+}
+
+pre p.break-line {
+  word-break: break-all;
   white-space: normal;
 }
 
 #podLog .el-dialog__header {
   padding-bottom: 0;
+}
+
+.el-steps.el-steps--vertical .el-step__main {
+  margin-bottom: 20px;
+}
+
+.el-steps.el-steps--vertical .el-step__title {
+  padding-bottom: 15px;
+}
+
+.el-steps.el-steps--vertical .el-step__description {
+  padding-right: 0;
+}
+
+.el-switch-hover-right {
+  position:absolute;
+  right:0px;
+  top:10px;
+  z-index:999;
+  opacity: 0.9;
+}
+
+.no-wrap {
+  white-space: normal;
+  word-break: break-word; 
+}
+
+/* v-md-editor */
+.github-markdown-body {
+  font-size: 14px !important;
+  padding: 15px 20px 10px !important;
+}
+.markdown-dark,
+.markdown-dark .github-markdown-body {
+  background: #121212 !important;
+  color: #e0e0e0 !important;
+}
+/* 强制覆盖 v-md-editor 的暗黑模式 */
+.markdown-dark .github-markdown-body .v-md-editor-preview,
+.markdown-dark .github-markdown-body .v-md-editor {
+  background: #121212 !important;
+  color: #e0e0e0 !important;
+}
+/* 代码块暗黑模式 */
+.markdown-dark .github-markdown-body pre {
+  background: #1e1e1e !important;
+  color: #d4d4d4 !important;
+}
+/* 表格、引用等元素 */
+.markdown-dark .github-markdown-body table,
+.markdown-dark .github-markdown-body blockquote {
+  border-color: #444 !important;
+}
+/* .vuepress-markdown-body a, .vuepress-markdown-body p a code {
+  color: var(--el-color-primary) !important;
+} */
+.markdown-dark .tekton-logs {
+  color: #e0e0e0 !important;
+  background-color: #121212 !important;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  border: none !important;
+  font-size: 14px;
+  font-family: Avenir,Helvetica,Arial,sans-serif;
+  font-weight: 400;
+  line-height: 1.6em;
+}
+.logs-footer {
+  font-weight: bold;
+  padding: 10px 25px 20px 20px;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.flex {
+  display: flex;
+}
+
+:root {
+  --el-color-success: rgb(92, 184, 122);
 }

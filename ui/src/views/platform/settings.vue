@@ -37,6 +37,26 @@
               </el-button-group>
             </el-col>
           </el-row>
+          <el-divider v-if="role==='admin'" />
+          <el-row v-if="role==='admin'">
+            <el-col :span="12">设置Tekton运行时数据获取方式</el-col>
+            <el-col :span="12">
+              <el-radio-group v-model="settings.tekton_source.setting_value" @change="setValue('tekton_source')" class="pull-right">
+                <el-radio value="crd">From Kubernetes Tekton CRD</el-radio>
+                <el-radio value="cloudevent">From CloudEvents Database</el-radio>
+              </el-radio-group>
+            </el-col>
+          </el-row>
+          <el-divider />
+          <el-row>
+            <el-col :span="12">设置Tekton流水线详情页展示方式</el-col>
+            <el-col :span="12">
+              <el-radio-group v-model="settings.pipelinerun_result.setting_value" @change="setValue('pipelinerun_result')" class="pull-right">
+                <el-radio value="flow">流程图</el-radio>
+                <el-radio value="collapse">折叠面板</el-radio>
+              </el-radio-group>
+            </el-col>
+          </el-row>
         </el-collapse-item>
         <el-collapse-item name="4">
           <template #title><h4><b>开启对接DolphinScheduler</b></h4></template>
@@ -65,7 +85,7 @@
         <el-collapse-item name="5">
           <template #title><h4><b>开启Helm包管理功能</b></h4></template>
           <el-row>
-            <el-col :span="18">Helm是Kubernetes环境下的包管理工具。<br>开启Helm包管理功能仅需agent启动时使用的<code>kubeconfig</code>或<code>serviceaccount</code>具备对相关namespace的操作权限。</el-col>
+            <el-col :span="18">Helm是Kubernetes环境下的包管理工具。<br>开启Helm包管理功能仅需 server（直连K8S）或 agent（间接连 K8S）启动时使用的<code>kubeconfig</code>或<code>serviceaccount</code>具备对相关namespace的操作权限。</el-col>
             <el-col :span="6" ><el-switch v-model="settings.enable_helm.setting_value" size="large" @change="setEnable('enable_helm')" /> </el-col>
           </el-row>
           <el-divider />
@@ -91,7 +111,7 @@
   /* 变量定义 */
   const store = useStore()
   const role = computed(() => {
-    return store.state.role
+    return store.state.userInfo.role
   })
   const activeNames = ref(["1","2","3","4","5"])
   const settings = ref({
@@ -102,6 +122,8 @@
     helm_timeout: {},
     default_tekton: {},
     server_url: {},
+    tekton_source: {},
+    pipelinerun_result: {},
   })
   const cluster = ref("")
   const clusterList = ref({})

@@ -22,6 +22,13 @@ type (
 	ListClusterReq {
 		WithVm bool `form:"with_vm,optional"`
 	}
+	RegisterServiceReq {
+		ServiceKey string   `json:"service_key"`
+		Endpoint   string   `json:"endpoint,optional"`
+		Proxy      string   `json:"proxy,optional"`
+		Kubeconfig string   `json:"kubeconfig,optional"`
+		Labels     []string `json:"labels,optional"`
+	}
 	Response {
 		Code    int         `json:"code"`
 		Data    interface{} `json:"data,omitempty"`
@@ -40,6 +47,12 @@ service lizardServer {
 	)
 	@handler version
 	get /version returns (string)
+	
+	@doc(
+		summary: 注册服务
+	)
+	@handler register
+	post /service (RegisterServiceReq) returns (Response)
 	
 	@doc(
 		summary: 获取注册的服务列表

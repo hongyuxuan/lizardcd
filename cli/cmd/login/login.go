@@ -15,6 +15,7 @@ import (
 var username string
 var password string
 var save bool
+var jwtToken string
 
 // LoginCmd represents the login command
 var LoginCmd = &cobra.Command{
@@ -22,17 +23,24 @@ var LoginCmd = &cobra.Command{
 	Short: "Login to lizardcd-server",
 	Run: func(cmd *cobra.Command, args []string) {
 		common.InitConfig()
-		var res *types.LoginRes
-		if err := common.LizardServer.Post("/lizardcd/auth/login").SetBody(map[string]string{
-			"username": username,
-			"password": password,
-		}).SetResult(&res).Do(context.Background()).Err; err != nil {
-			common.PrintFatal(err.Error())
+		if username == "" && password == "" && jwtToken == "" {
+			common.PrintFatal("username or password or token must specified")
 		}
-		viper.Set("lizardcd.auth.access_token", res.AccessToken)
-		if save {
-			viper.Set("lizardcd.auth.username", username)
-			viper.Set("lizardcd.auth.password", password)
+		if jwtToken != "" {
+			viper.Set("lizardcd.auth.access_token", jwtToken)
+		} else {
+			var res *types.LoginRes
+			if err := common.LizardServer.Post("/lizardcd/auth/login").SetBody(map[string]string{
+				"username": username,
+				"password": password,
+			}).SetSuccessResult(&res).Do(context.Background()).Err; err != nil {
+				common.PrintFatal(err.Error())
+			}
+			viper.Set("lizardcd.auth.access_token", res.AccessToken)
+			if save {
+				viper.Set("lizardcd.auth.username", username)
+				viper.Set("lizardcd.auth.password", password)
+			}
 		}
 		viper.WriteConfig()
 	},
@@ -41,7 +49,6 @@ var LoginCmd = &cobra.Command{
 func init() {
 	LoginCmd.Flags().StringVarP(&username, "username", "u", "", "lizardcd-server username")
 	LoginCmd.Flags().StringVarP(&password, "password", "p", "", "lizardcd-server password")
+	LoginCmd.Flags().StringVarP(&jwtToken, "token", "t", "", "lizardcd-server jwt token")
 	LoginCmd.Flags().BoolVar(&save, "save", false, "if save lizardcd-server password")
-	LoginCmd.MarkFlagRequired("username")
-	LoginCmd.MarkFlagRequired("password")
 }

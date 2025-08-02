@@ -18,6 +18,7 @@ import (
 	"github.com/zeromicro/zero-contrib/zrpc/registry/consul"
 	"github.com/zeromicro/zero-contrib/zrpc/registry/nacos"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -50,6 +51,7 @@ func main() {
 	kingpin.Version(printVersion())
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
+	fmt.Println(printVersion())
 
 	c := config.NewConfig(
 		configFile,
@@ -73,7 +75,7 @@ func main() {
 		logx.Infof("Lizardcd-agent: %s register to etcd success", c.Etcd.Key)
 
 		// if c.Mode == service.DevMode || c.Mode == service.TestMode {
-		// 	reflection.Register(grpcServer)
+		reflection.Register(grpcServer)
 		// }
 	})
 	defer s.Stop()

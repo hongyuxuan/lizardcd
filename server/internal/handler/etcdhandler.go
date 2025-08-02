@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
+	"github.com/samber/lo"
 	"github.com/zeromicro/go-zero/core/discov"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/zrpc"
@@ -52,6 +54,54 @@ func StartEtcdWatch(svcCtx *svc.ServiceContext) {
 				}
 			}
 		}
+	}
+}
+
+func WatchAgentManually(svcCtx *svc.ServiceContext) {
+	for {
+		var agents []commontypes.Agent
+		if err := svcCtx.Database.Find(&agents).Error; err != nil {
+			logx.Errorf("Failed to get agents from db: %v", err)
+			continue
+		}
+		fromDB := lo.Map(agents, func(item commontypes.Agent, _ int) string {
+			return item.ServiceKey
+		})
+		var onlineAgent []string
+		for k, v := range svcCtx.AgentList {
+			if v.ServiceSource == "manual" {
+				onlineAgent = append(onlineAgent, k)
+			}
+		}
+		agentToRemove, _ := lo.Difference(onlineAgent, fromDB)
+		for _, k := range agentToRemove {
+			if _, ok := svcCtx.AgentList[k]; ok {
+				svcCtx.AgentList[k].Cli.Conn().Close()
+				delete(svcCtx.AgentList, k)
+				logx.Infof("Lizardcd-agent %s removed from lizardcd-server manually", k)
+			}
+		}
+
+		var onlineK8s []string
+		for k := range svcCtx.K8sList {
+			onlineK8s = append(onlineK8s, k)
+		}
+		k8sToRemove, _ := lo.Difference(onlineK8s, fromDB)
+		for _, k := range k8sToRemove {
+			if _, ok := svcCtx.K8sList[k]; ok {
+				delete(svcCtx.K8sList, k)
+				logx.Infof("K8s connection %s removed from lizardcd-server", k)
+			}
+		}
+
+		for _, agent := range agents {
+			if err := svcCtx.RegisterAgent(agent.ServiceKey, agent.Endpoint, agent.Proxy, agent.Kubeconfig, agent.Labels); err != nil {
+				logx.Error(err)
+				continue
+			}
+		}
+
+		time.Sleep(10 * time.Second)
 	}
 }
 

@@ -19,12 +19,13 @@ type Config struct {
 		Oauth2       bool   `json:",optional"`
 		EncKey       string `json:",optional"`
 	}
-	Consul        ConsulConf `json:",optional"`
-	Nacos         NacosConf  `json:",optional"`
-	Etcd          EtcdConf   `json:",optional"`
-	ServicePrefix string     `json:",optional"`
-	Sqlite        string
-	Rpc           RpcOption `json:",optional"`
+	Consul         ConsulConf `json:",optional"`
+	Nacos          NacosConf  `json:",optional"`
+	Etcd           EtcdConf   `json:",optional"`
+	ServicePrefix  string     `json:",optional"`
+	Database       DatabaseConf
+	Rpc            RpcOption `json:",optional"`
+	TektonEndpoint string    `json:",optional"`
 }
 
 type RpcOption struct {
@@ -46,11 +47,25 @@ type NacosConf struct {
 }
 
 type EtcdConf struct {
-	Address string
+	Address             string
+	LeaderPrefix        string `json:",optional"`
+	TTL                 int    `json:",optional"`
+	LeaderRetryInterval int    `json:",optional"`
+	LeaderRetryTimeout  int    `json:",optional"`
 }
 
 type ConsulConf struct {
 	Address string
+}
+
+type DatabaseConf struct {
+	Type     string
+	DBfile   string `json:",optional"`
+	Host     string `json:",optional"`
+	Port     int    `json:",optional"`
+	Database string `json:",optional"`
+	Username string `json:",optional"`
+	Password string `json:",optional"`
 }
 
 func NewConfig(configFile, logLevel, consulAddr, etcdAddr, nacosAddr, nacosNamespaceId, nacosUsername, nacosPassword, nacosGroup, servicePrefix, listenOn, metricsListenOn, dbfile, accessSecret *string, accessExpire *int64) Config {
@@ -70,7 +85,6 @@ func NewConfig(configFile, logLevel, consulAddr, etcdAddr, nacosAddr, nacosNames
 		c.Consul = ConsulConf{}
 		c.Etcd = EtcdConf{}
 		c.Nacos = NacosConf{}
-		c.Sqlite = "./lizardcd.db"
 		c.Auth.AccessSecret = "wLnOk8keh/WO5u7lX8H1dB1/mcuHvnI/jfWCMXMPg9o="
 		c.Auth.AccessExpire = 86400
 	}
@@ -114,7 +128,7 @@ func NewConfig(configFile, logLevel, consulAddr, etcdAddr, nacosAddr, nacosNames
 		c.ServicePrefix = *servicePrefix
 	}
 	if *dbfile != "" {
-		c.Sqlite = *dbfile
+		c.Database.DBfile = *dbfile
 	}
 	if *accessSecret != "" {
 		c.Auth.AccessSecret = *accessSecret
@@ -137,6 +151,18 @@ func NewConfig(configFile, logLevel, consulAddr, etcdAddr, nacosAddr, nacosNames
 	if c.Etcd.Address == "" && c.Consul.Address == "" && c.Nacos.Address == "" {
 		logx.Errorf("Either etcd, consul or nacos address must be specified.")
 		os.Exit(0)
+	}
+	if c.Etcd.TTL == 0 {
+		c.Etcd.TTL = 60
+	}
+	if c.Etcd.LeaderRetryInterval == 0 {
+		c.Etcd.LeaderRetryInterval = 10
+	}
+	if c.Etcd.LeaderRetryTimeout == 0 {
+		c.Etcd.LeaderRetryTimeout = 10
+	}
+	if c.Etcd.LeaderPrefix == "" {
+		c.Etcd.LeaderPrefix = "/lizardcd-job-election"
 	}
 	logx.DisableStat()
 	logx.MustSetup(c.Log)

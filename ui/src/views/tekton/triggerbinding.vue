@@ -1,25 +1,22 @@
 <template>
 <div class="box box-item">
   <div class="box-body" style="padding-top:20px;padding-bottom:0">
-    <el-alert type="warning" show-icon style="margin-bottom:15px">
+    <el-alert type="info" show-icon style="margin-bottom:15px">
       <template #title>
-        关于 TriggerBinding 配置参考：<el-link href="https://tekton.dev/docs/triggers/triggerbindings/" :underline="false" type="primary" target="_blank">TriggerBindings</el-link>
+        关于 TriggerBinding 配置参考：<el-link href="https://tekton.dev/docs/triggers/triggerbindings/" underline="never" type="primary" target="_blank">TriggerBindings</el-link>
       </template>
     </el-alert>
     <el-row>
-      <el-col :span="12">
+      <el-col :span="18">
         <el-button-group>
-          <el-button :icon="Refresh" size="large" style="margin-right:5px" @click="getList(true)" />
-          <el-select v-model="cluster" placeholder="请选择集群" clearable filterable style="width:200px;margin-right:5px" size="large">
-            <el-option v-for="(v,k) in clusterList" :key="k" :label="k" :value="k" />
+          <el-button :icon="Refresh" size="large" @click="getList(true)" />
+          <el-select v-model="namespace" placeholder="请选择命名空间" clearable filterable @change="getList(true)" style="width:250px;" size="large">
+            <el-option v-for="(item) in props.namespaceList" :key="item" :label="item" :value="item" />
           </el-select>
-          <el-select v-model="namespace" placeholder="请选择命名空间" clearable filterable @change="getList(true)" style="width:200px;margin-right:5px" size="large">
-            <el-option v-for="(item) in clusterList[cluster]" :key="item" :label="item" :value="item" />
-          </el-select>
-          <el-input v-model="searchKey" placeholder="输入名称进行搜索" size="large" :prefix-icon="Search" @change="getPage(1)" clearable style="width:200px;" />
+          <el-input v-model="searchKey" placeholder="输入名称进行搜索" size="large" :prefix-icon="Search" @change="getPage(1)" clearable style="width:250px;" />
         </el-button-group>
       </el-col>
-      <el-col :span="12">
+      <el-col :span="6">
         <el-button-group class="pull-right">
           <el-button class="pull-right" size="large" type="primary" @click="show.yaml=true;edit=false;form={content:'',variables:[]}">+ 创建TriggerBinding</el-button>
         </el-button-group>
@@ -108,8 +105,8 @@
           <thead><tr><th>变量名</th><th>默认变量值</th></tr></thead>
           <tbody>
           <tr v-for="(item,index) in form.variables" :key="index" >
-            <td><el-input v-model="item.key" size="large" /></td>
-            <td><el-input v-model="item.value" size="large" /></td>
+            <td style="vertical-align: top"><el-input v-model="item.key" size="large" /></td>
+            <td><el-input v-model="item.value" size="large" /><myTips type="info">{{ item.memo }}</myTips></td>
             <td width="80">
               <el-button-group>
                 <el-button icon="Plus" circle @click="addVar(index)"></el-button>
@@ -143,14 +140,17 @@ import 'ace-builds/src-noconflict/mode-yaml'
 import 'ace-builds/src-noconflict/theme-chrome'
 import 'ace-builds/src-noconflict/ext-language_tools'
 /* 变量定义 */
+const props = defineProps({
+  defaultTekton: { type: Object }, 
+  namespaceList: { type: Array }, 
+})
 const all = ref([])
 const searchKey = ref("")
 const list = ref([])
 const pageSize = ref(10)
 const pageTotal = ref(0)
 const current = ref(1)
-const cluster = ref("")
-const clusterList = ref({})
+const namespaceList = ref([])
 const namespace = ref("")
 const loading = ref(false)
 const show = ref({
@@ -161,18 +161,14 @@ const form = ref({content:'',variables:[],templates:{}})
 const templateList = ref([])
 /* 生命周期函数 */
 onBeforeMount(async () => {
-  getClusterList()
   getTemlates()
 })
 /* methods */
-const getClusterList = async () => {
-  clusterList.value = await axios.get(`/lizardcd/server/clusters`)
-}
 const getList = async (ifLoading) => {
   if(ifLoading) loading.value = true
-  if(cluster.value !== "" && namespace.value !== "") {
-    let response = await axios.get(`/lizardcd/tekton/cluster/${cluster.value}/namespace/${namespace.value}/triggerbindings`)
-    all.value = _.sortBy(response, 'metadata.creationTimestamp').reverse()
+  if(props.defaultTekton.cluster !== "" && namespace.value !== "") {
+    let response = await axios.get(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/triggerbindings`)
+    all.value = _.sortBy(response.results, 'metadata.creationTimestamp').reverse()
     getPage(current.value)
   }
   if(ifLoading) loading.value = false
@@ -204,43 +200,56 @@ const selectTemplate = (val) => {
 const editOne = async (row) => {
   show.value.yaml = true
   edit.value = true
-  form.value.content = await axios.get(`/lizardcd/tekton/cluster/${cluster.value}/namespace/${namespace.value}/triggerbindings/${row.metadata.name}/yaml`)
+  form.value.content = await axios.get(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/triggerbindings/${row.metadata.name}/yaml`)
 }
 const deleteOne = async (row) => {
-  await axios.delete(`/lizardcd/tekton/cluster/${cluster.value}/namespace/${namespace.value}/triggerbindings/${row.metadata.name}`)
+  await axios.delete(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/triggerbindings/${row.metadata.name}`)
   ElMessage.success({message: `删除TriggerBinding成功`})
   setTimeout(async () => {
     await getList(true)
   }, 500)
 }
 const submitYaml = async () => {
-  if(cluster.value === "" || namespace.value == "") {
+  if(props.defaultTekton.cluster === "" || namespace.value == "") {
     ElMessage.warning({message: '请指定集群和命名空间'})
     return
   } 
   let params = Object.assign({}, form.value)
   delete params.templates
-  let vars = {}
+  let vars = {
+    "Namespace": namespace.value,
+    "Username": localStorage.username
+  }
   for(let x of params.variables) {
     vars[x.key] = x.value
   }
   params.variables = vars
-  if(edit.value === false) {
-    await axios.post(`/lizardcd/tekton/cluster/${cluster.value}/namespace/${namespace.value}/apply?kind=TriggerBinding`, params)
-    ElMessage.success({message: `创建TriggerBinding成功`})
+  try {
+    if(edit.value === false) {
+      await axios.post(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/apply?kind=TriggerBinding`, params)
+      ElMessage.success({message: `创建TriggerBinding成功`})
+    }
+    else {
+      delete params.variables
+      await axios.post(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/apply?kind=TriggerBinding`, params)
+      ElMessage.success({message: `更新TriggerBinding成功`})
+    }
+    show.value.yaml = false
+    setTimeout(async () => {
+      await getList(true)
+    }, 500)
+  } catch(e) {
+    ElMessage.error({message: e})
   }
-  else {
-    delete params.variables
-    await axios.post(`/lizardcd/tekton/cluster/${cluster.value}/namespace/${namespace.value}/apply?kind=TriggerBinding`, params)
-    ElMessage.success({message: `更新TriggerBinding成功`})
-  }
-  show.value.yaml = false
-  setTimeout(async () => {
-    await getList(true)
-  }, 500)
 }
 const handleSizeChange = async (size) => {
   pageSize.value = size
   await getList(true)
+}
+const addVar = (index) => {
+  form.value.variables.splice(index+1, 0, {key:"", value:""})
+}
+const removeVar = (index) => {
+  form.value.variables.splice(index, 1)
 }
 </script>

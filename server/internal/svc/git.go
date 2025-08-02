@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/hongyuxuan/lizardcd/common/constant"
 	"github.com/hongyuxuan/lizardcd/common/errorx"
@@ -34,7 +35,7 @@ func NewGitService(ctx context.Context, svcCtx *ServiceContext) *GitService {
 
 func (g *GitService) GetGitConnection(tenant, gitHttpUrl string) (repo *commontypes.GitRepository, git *gitlab.Client, project *gitlab.Project, err error) {
 	var gitRepos []commontypes.GitRepository
-	tx := g.svcCtx.Sqlite.WithContext(context.WithValue(context.Background(), commontypes.TraceIDKey{}, "sqlite.ListGitRepository")).Model(&commontypes.GitRepository{})
+	tx := g.svcCtx.Database.WithContext(context.WithValue(context.Background(), commontypes.TraceIDKey{}, "sqlite.ListGitRepository")).Model(&commontypes.GitRepository{})
 	if tenant != constant.ROLE_ADMIN {
 		tx.Where("tenant = ?", tenant)
 	}
@@ -90,15 +91,47 @@ func (g *GitService) GetYamlFromGit(application commontypes.Application, tenant 
 	g.Logger.Infof("get project %s success", project.WebURL)
 	includes := strings.Split(application.GitOps.Include, ",")
 	excludes := strings.Split(application.GitOps.Exclude, ",")
-	filecontent, err = g.getFileContent(git, project, &application.GitOps.Path, &application.GitOps.GitRevision, includes, excludes)
+	var filecontents []string
+	filecontents, err = g.GetFilesContent(git, project, &application.GitOps.Path, &application.GitOps.GitRevision, includes, excludes)
+	filecontent = strings.Join(filecontents, "\n---\n")
 	return
 }
 
-func (g *GitService) getFileContent(git *gitlab.Client, project *gitlab.Project, path, ref *string, includes, excludes []string) (filecontent string, err error) {
-	recursive := false
+func (g *GitService) GetFilesContent(git *gitlab.Client, project *gitlab.Project, path, ref *string, includes, excludes []string) (filecontents []string, err error) {
+	var candidates []string
+	if candidates, err = g.GetNodesRecursive(git, project, path, ref, includes, excludes); err != nil {
+		return
+	}
+	var wg sync.WaitGroup
+	resultChan := make(chan string, len(candidates))
+	for _, candidate := range candidates {
+		wg.Add(1)
+		go func(candidate string, ch chan string, wg *sync.WaitGroup) {
+			var b []byte
+			if b, _, err = git.RepositoryFiles.GetRawFile(project.ID, candidate, &gitlab.GetRawFileOptions{Ref: ref}); err != nil {
+				g.Logger.Errorf("error in getFileContent: %w", err)
+				ch <- ""
+				wg.Done()
+				return
+			}
+			ch <- string(b)
+			wg.Done()
+		}(candidate, resultChan, &wg)
+	}
+	wg.Wait()
+	close(resultChan)
+	for result := range resultChan {
+		if result != "" {
+			filecontents = append(filecontents, result)
+		}
+	}
+	return
+}
+
+func (g *GitService) GetNodesRecursive(git *gitlab.Client, project *gitlab.Project, path, ref *string, includes, excludes []string) (allnodes []string, err error) {
+	recursive := true
 	page := 1
 	perpage := 20
-	var candidates []string
 	for {
 		var nodes []*gitlab.TreeNode
 		if nodes, _, err = git.Repositories.ListTree(project.ID, &gitlab.ListTreeOptions{
@@ -106,7 +139,7 @@ func (g *GitService) getFileContent(git *gitlab.Client, project *gitlab.Project,
 			Ref:         ref,
 			Recursive:   &recursive,
 			ListOptions: gitlab.ListOptions{Page: page, PerPage: perpage}}); err != nil {
-			return "", fmt.Errorf("error in git.Repositories.ListTree: %w", err)
+			return nil, fmt.Errorf("error in git.Repositories.ListTree: %w", err)
 		}
 		if len(nodes) == 0 {
 			break
@@ -130,17 +163,9 @@ func (g *GitService) getFileContent(git *gitlab.Client, project *gitlab.Project,
 			}
 			if hit {
 				g.Logger.Infof("hit %s ref=%s file=%s", project.WebURL, *ref, node.Path)
-				candidates = append(candidates, node.Path)
+				allnodes = append(allnodes, node.Path)
 			}
 		}
-		for _, candidate := range candidates {
-			var b []byte
-			if b, _, err = git.RepositoryFiles.GetRawFile(project.ID, candidate, &gitlab.GetRawFileOptions{Ref: ref}); err != nil {
-				return "", fmt.Errorf("error in getFileContent: %w", err)
-			}
-			filecontent += string(b) + "\n---\n"
-		}
-		g.Logger.Debugf("\n%s", filecontent)
 		page += 1
 	}
 	return
@@ -161,9 +186,20 @@ func (g *GitService) GetLastCommitId(git *gitlab.Client, project *gitlab.Project
 	return
 }
 
+func (g *GitService) GetMergeRequestDiffs(git *gitlab.Client, project *gitlab.Project, iid int64) (fileChanges []string, err error) {
+	var diffs []*gitlab.MergeRequestDiff
+	if diffs, _, err = git.MergeRequests.ListMergeRequestDiffs(project.ID, int(iid), nil); err != nil {
+		return nil, fmt.Errorf("error in git.MergeRequests.ListMergeRequestDiffs: %w", err)
+	}
+	for _, diff := range diffs {
+		fileChanges = append(fileChanges, diff.NewPath)
+	}
+	return
+}
+
 func (g *GitService) ParseYaml(ctx context.Context, application commontypes.Application, yamlstring string) (err error) {
 	// clear application_resource
-	g.svcCtx.Sqlite.WithContext(context.WithValue(ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplicationResource")).Delete(&commontypes.ApplicationResource{}, "application_id = ?", application.Id)
+	g.svcCtx.Database.WithContext(context.WithValue(ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplicationResource")).Delete(&commontypes.ApplicationResource{}, "application_id = ?", application.Id)
 
 	for _, yml := range strings.Split(yamlstring, "---") {
 		if strings.TrimSpace(yml) == "" {
@@ -183,7 +219,7 @@ func (g *GitService) ParseYaml(ctx context.Context, application commontypes.Appl
 				ResourceName:    unstructureObj.GetName(),
 				DesiredManifest: yml,
 			}
-			if err = g.svcCtx.Sqlite.WithContext(context.WithValue(ctx, commontypes.TraceIDKey{}, "sqlite.SaveApplicationResource")).Create(&appResource).Error; err != nil {
+			if err = g.svcCtx.Database.WithContext(context.WithValue(ctx, commontypes.TraceIDKey{}, "sqlite.SaveApplicationResource")).Create(&appResource).Error; err != nil {
 				g.Logger.Error(err)
 				return fmt.Errorf("error in SaveApplicationResource: %w", err)
 			}

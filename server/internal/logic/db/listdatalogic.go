@@ -39,33 +39,32 @@ func (l *ListdataLogic) Listdata(req *commontypes.GetDataReq) (resp *types.Respo
 	switch req.Tablename {
 	case "application":
 		var data []commontypes.Application
-		joinTable := "Template"
-		return l.list(l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListApplication")).Model(commontypes.Application{}), data, req, &joinTable)
+		return l.list(l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListApplication")).Model(commontypes.Application{}), data, req, nil)
 	case "application_faas":
 		var data []commontypes.ApplicationFaas
-		return l.list(l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListApplicationFaas")).Model(commontypes.ApplicationFaas{}), data, req, nil)
+		return l.list(l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListApplicationFaas")).Model(commontypes.ApplicationFaas{}), data, req, nil)
 	case "application_resource":
 		return l.appRepository.ListResource(req)
 	case "user":
 		var data []commontypes.User
-		tx := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListUser")).Model(&commontypes.User{}).Select("id", "username", "role", "tenant", "update_at")
+		tx := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListUser")).Model(&commontypes.User{}).Select("id", "userid", "email", "username", "role", "tenant", "update_at")
 		return l.list(tx, data, req, nil)
 	case "tokens":
 		if role != constant.ROLE_ADMIN {
 			return nil, errorx.NewError(http.StatusForbidden, "not permitted", nil)
 		}
 		var data []commontypes.Tokens
-		return l.list(l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListTokens")).Model(&commontypes.Tokens{}), data, req, nil)
+		return l.list(l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListTokens")).Model(&commontypes.Tokens{}), data, req, nil)
 	case "task_history":
 		var data []commontypes.TaskHistory
-		tx := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListTaskHistory")).Model(&commontypes.TaskHistory{})
+		tx := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListTaskHistory")).Model(&commontypes.TaskHistory{})
 		if req.Preload {
 			tx.Preload("TaskHistoryWorkloads")
 		}
 		return l.list(tx, data, req, nil)
 	case "helm_repositories":
 		var data []commontypes.HelmRepositories
-		return l.list(l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListHelmRepositories")).Model(commontypes.HelmRepositories{}), data, req, nil)
+		return l.list(l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListHelmRepositories")).Model(commontypes.HelmRepositories{}), data, req, nil)
 	case "git_repository":
 		return l.ciRepository.ListGitRepository(req)
 	case "ci_trigger":
@@ -73,7 +72,7 @@ func (l *ListdataLogic) Listdata(req *commontypes.GetDataReq) (resp *types.Respo
 	default:
 		// []map[string]interface{} cannot use l.list, will be failed with 'sql: Scan error on column index 0, name "id": destination not a pointer'
 		data := []map[string]interface{}{}
-		tx := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListData")).Table(req.Tablename)
+		tx := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListData")).Table(req.Tablename)
 		var count int64
 		utils.SetTx(tx, req, &count, role, tenant, nil)
 		if err = tx.Find(&data).Error; err != nil {

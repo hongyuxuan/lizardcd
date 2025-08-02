@@ -45,7 +45,7 @@ func (l *UpdatedataLogic) Updatedata(req *types.UpdateDataReq) (resp *types.Resp
 	case "ci_trigger":
 		_, err = l.ciRepository.SaveCiTrigger(req.Body)
 	default:
-		err = l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.UpdateData")).
+		err = l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.UpdateData")).
 			Table(req.Tablename).
 			Where("id = ?", req.Id).
 			Updates(req.Body).Error

@@ -10,10 +10,10 @@
     </div>
   </template>
   <el-row>
-    <el-col :span="18">
+    <el-col :span="16">
       <el-button-group style="width:100%">
-        <el-button :icon="Refresh" size="large" style="margin-right:5px" @click="getList(current)" />
-        <el-input v-model="searchKey" clearable placeholder="输入应用名查询……" :prefix-icon="Search" @change="getList(1);current=1" style="width:25%;margin-right:5px" size="large" />
+        <el-button :icon="Refresh" size="large" @click="getList(current)" />
+        <el-input v-model="searchKey" clearable placeholder="输入应用名查询……" :prefix-icon="Search" @change="getList(1);current=1" style="width:25%;" size="large" />
         <el-select 
           v-model="searchTags"
           multiple 
@@ -30,10 +30,19 @@
         </el-select>
       </el-button-group>
     </el-col>
-    <el-col :span="6">
+    <el-col :span="8">
       <el-button-group class="pull-right">
+        <el-dropdown @command="handleMore" class="pull-right">
+          <el-button size="large">更多操作<el-icon class="el-icon--right"><arrow-down /></el-icon></el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="{action:'modifyBatch'}">批量更新</el-dropdown-item>
+              <el-dropdown-item :command="{action:'deleteBatch'}">批量删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button class="pull-right" size="large" type="primary" @click="edit=false;applicationInfo={};refAdd.open()">+ 新建应用</el-button>
-        <el-button class="pull-right" size="large" type="primary" @click="show.deploy=true;formDeploy={policy:'same'}" style="margin-right:5px">发布应用</el-button>
+        <el-button class="pull-right" size="large" type="primary" @click="release()">应用发布</el-button>
       </el-button-group>
     </el-col>
   </el-row>
@@ -42,11 +51,12 @@
     v-loading="loading.table"
     element-loading-text="奋力加载中..."
     class="line-height40" 
+    @selection-change="select"
     style="width:100%;margin-top:10px">
     <el-table-column type="selection" width="45" />
     <el-table-column prop="app_name" label="应用名称" min-width="200">
       <template #default="scope">
-        <el-link :underline="false" :href="`/application/${scope.row.id}`">{{ scope.row.app_name }}</el-link>
+        <el-link underline="never" :href="`/application/${scope.row.id}`">{{ scope.row.app_name }}</el-link>
         <span v-if="syncList.hasOwnProperty(scope.row.app_name)" style="margin-left:5px">
           <el-popover placement="right-start" :width="300" trigger="hover">
             <template #reference>
@@ -71,7 +81,7 @@
             <template #content>
               <span>FINISH_AT: {{ item.finish_at || "" }}</span>
             </template>
-            <el-link  :underline="false" :href="`/task/history?id=${item.id}`" target="_blank" style="font-size:12px">
+            <el-link  underline="never" :href="`/task/history/${item.id}`" target="_blank" style="font-size:12px">
               <font-awesome-icon icon="circle" v-if="['finished','initialize','terminated'].includes(item.status)&&item.success===true" class="text-success" />
               <font-awesome-icon icon="circle" v-else-if="['finished','initialize','terminated'].includes(item.status)&&item.success===false" class="text-red" />
               <font-awesome-icon icon="circle" v-else class="text-yellow twinkling" />
@@ -121,17 +131,23 @@
     @size-change="handleSizeChange"
     v-model:current-page="current" />
 </el-card>
-<addForm ref="refAdd" :form="applicationInfo" :k8scluster="k8scluster" :edit="edit" @submit="getList(current)" />
-<deployForm ref="refDeploy" :applicationInfo="applicationInfo" />
+<addForm ref="refAdd" 
+  :form="applicationInfo" 
+  :k8scluster="k8scluster" 
+  :repoList="repoList" 
+  :tenantList="tenantList" 
+  :edit="edit" 
+  @submit="getList(current)" />
+<batchEdit ref="refBatchEdit" :repoList="repoList" :rows="selected" :tenantList="tenantList" @submit="getList(current)" />
 </template>
 
 <script setup>
 import { ArrowRight,Search,Refresh } from '@element-plus/icons-vue'
-import { onBeforeMount, ref } from 'vue'
+import { nextTick, onBeforeMount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import addForm from './add.vue'
-import deployForm from './deploy.vue'
+import batchEdit from './batchedit.vue'
 import { axios } from '/src/assets/util/axios'
 import moment from 'moment'
 import _ from 'lodash'
@@ -145,9 +161,6 @@ const current = ref(1)
 const searchTags = ref([])
 const searchKey = ref("")
 const tagOptions = ref([])
-const show = ref({
-  deploy: false
-})
 const edit = ref(false)
 const k8scluster = ref({})
 const loading = ref({
@@ -155,12 +168,14 @@ const loading = ref({
   table: false,
   artifact: false,
 })
-const formDeploy = ref({})
+const selected = ref([])
 const applicationInfo = ref({})
 const taskList = ref({})
 const syncList = ref({})
 const refAdd = ref(null)
-const refDeploy = ref(null)
+const refBatchEdit = ref(null)
+const tenantList = ref([])
+const repoList = ref([])
 /* 生命周期函数 */
 onBeforeMount(async () => {
   if(route.query.app_name) {
@@ -168,7 +183,9 @@ onBeforeMount(async () => {
   }
   getClusterList()
   getList(1)
-});
+  getTenantList()
+  getRepoList()
+})
 /* methods */
 const getList = async (page) => {
   let url = `page=${page}&size=${pageSize.value}&sort=application.update_at desc`
@@ -194,6 +211,16 @@ const getList = async (page) => {
   getApplicationTask()
   getApplicationSyncStatus()
 }
+const getRepoList = async () => {
+  let response = await axios.get(`/lizardcd/db/image_repository?size=1000`)
+  repoList.value = _.uniqBy(response.results, (item) => {
+    return `${item.repo_account}-${item.repo_url}`
+  })
+}
+const getTenantList = async () => {
+  let response = await axios.get(`/lizardcd/db/tenant`)
+  tenantList.value = response.results.map(x => x.tenant_name)
+}
 const getApplicationTask = async () => {
   let response = await axios.get(`/lizardcd/task/history_by_application?size=5&sort=init_at%20desc&apps=${list.value.map(x => encodeURIComponent(x.app_name)).join(',')}`)
   for(let [k,v] of Object.entries(response)) {
@@ -217,10 +244,15 @@ const getClusterList = async () => {
   k8scluster.value = await axios.get(`/lizardcd/server/clusters`)
 }
 const handleCommand = async (command) => {
-  applicationInfo.value = Object.assign({}, command.row)
+  applicationInfo.value = _.cloneDeep(command.row)
   switch(command.action) {
     case "deploy": {
-      refDeploy.value.open()
+      router.push({
+        path: '/application/release',
+        query: {
+          app_name: command.row.app_name
+        }
+      })
       break
     }
     case "sync": {
@@ -295,5 +327,39 @@ const handleCommand = async (command) => {
 const handleSizeChange = async (size) => {
   pageSize.value = size
   await getList(current.value)
+}
+const select = (val) => {
+  selected.value = val
+}
+const handleMore = async (command) => {
+  if(selected.value.length === 0) {
+    ElMessage.warning({message: '请勾选记录'})
+    return
+  }
+  switch(command.action) {
+    case "deleteBatch": {
+      await ElMessageBox.confirm('确定删除？','警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }).then(async () => {
+        ElMessage.warning({message: `正在删除，请稍后`})
+        await Promise.all(selected.value.map(x => {
+          return axios.delete(`/lizardcd/db/application/${x.id}`)
+        }))
+        getList(current.value)
+      }).catch(() =>{})
+      break
+    }
+    case "modifyBatch": {
+      refBatchEdit.value.open()
+      break
+    }
+  }
+}
+const release = () => {
+  router.push({
+    path: '/application/release',
+  })
 }
 </script>

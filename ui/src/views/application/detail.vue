@@ -13,7 +13,7 @@
           <div class="box-tools pull-right" style="top:5px">
             <span class="card-header-btn">
               <el-dropdown @command="handleCommand">
-                <el-link :underline="false" type="primary">
+                <el-link underline="never" type="primary">
                   更多操作
                   <el-icon class="el-icon--right">
                     <arrow-down />
@@ -34,7 +34,7 @@
           </div>
         </div>
       </template>
-      <el-descriptions :column="1" :label-width="200">
+      <el-descriptions :column="1" :label-width="120" border class="no-color">
         <el-descriptions-item label="代码仓库">{{ applicationInfo.git_http_url }}</el-descriptions-item>
         <el-descriptions-item label="制品库" v-if="applicationInfo.deploy_type!=='GitOps'">{{ repoInfo.repo_url }}</el-descriptions-item>
         <el-descriptions-item label="仓库/项目" v-if="applicationInfo.deploy_type!=='GitOps'">{{ applicationInfo.repo_name }}</el-descriptions-item>
@@ -45,15 +45,15 @@
         </el-descriptions-item>
         <el-descriptions-item label="部署方式">{{ applicationInfo.deploy_type }}</el-descriptions-item>
         <el-descriptions-item label="开启流量控制" v-if="applicationInfo.deploy_type==='容器'">{{ applicationInfo.enable_traffic_control?'是':'否' }}</el-descriptions-item>
-        <el-descriptions-item label="开启自动构建">{{ applicationInfo.enable_build?'是':'否' }}</el-descriptions-item>
-        <el-descriptions-item label="构建模板" v-if="applicationInfo.enable_build">
-          <el-link :underline="false" type="primary" @click="show.template=true">点我查看</el-link>
+        <el-descriptions-item label="开启自动构建">{{ applicationInfo.auto_build?.enable===true?'是':'否' }}</el-descriptions-item>
+        <el-descriptions-item label="构建模板" v-if="applicationInfo.auto_build?.enable===true">
+          <el-link underline="never" type="primary" @click="show.template=true">点我查看</el-link>
         </el-descriptions-item>
         <el-descriptions-item label="构建脚本" v-if="applicationInfo.enable_build">
-          <el-link :underline="false" type="primary" @click="show.build_script=true">点我查看</el-link>
+          <el-link underline="never" type="primary" @click="show.build_script=true">点我查看</el-link>
         </el-descriptions-item>
         <el-descriptions-item label="版本获取脚本" v-if="applicationInfo.enable_build">
-          <el-link :underline="false" type="primary" @click="show.version_script=true">点我查看</el-link>
+          <el-link underline="never" type="primary" @click="show.version_script=true">点我查看</el-link>
         </el-descriptions-item>
         <el-descriptions-item label="更新时间">{{ applicationInfo.update_at }}</el-descriptions-item>
       </el-descriptions>
@@ -115,8 +115,8 @@
                   <div style="font-size:12px;color:#8d8c8c;line-height:20px">{{ item.workload_type||item.resource_type }}</div>
                 </td>
                 <td width="45" style="text-align: right">
-                  <el-link type="primary" :underline="false" v-if="applicationInfo.gitops" @click="openManifest(item)"><font-awesome-icon icon="magnifying-glass"/></el-link>
-                  <el-link type="primary" :underline="false" :href="`/workload/${item.workload_type||item.resource_type}/${item.workload_name||item.resource_name}?cluster=${item.cluster}&namespace=${item.namespace}`"><font-awesome-icon icon="share" /></el-link>
+                  <el-link type="primary" underline="never" v-if="applicationInfo.gitops" @click="openManifest(item)"><font-awesome-icon icon="magnifying-glass"/></el-link>
+                  <el-link type="primary" underline="never" :href="`/workload/${item.workload_type||item.resource_type}/${item.workload_name||item.resource_name}?cluster=${item.cluster}&namespace=${item.namespace}`"><font-awesome-icon icon="share" /></el-link>
                 </td>
               </tr>
             </table>
@@ -127,7 +127,6 @@
   </el-col>
 </el-row>
 <addForm ref="refAdd" :form="applicationInfo" :k8scluster="k8scluster" :edit="true" @submit="getInfo" />
-<deployForm ref="refDeploy" :applicationInfo="applicationInfo" />
 <el-drawer v-model="show.manifest" direction="rtl" size="1000px">
   <template #header>
     <h4>Manifests</h4>
@@ -261,7 +260,6 @@ import { onBeforeMount, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import addForm from './add.vue'
-import deployForm from './deploy.vue'
 import { CodeDiff } from 'v-code-diff'
 /* 引入v-ace-editor */
 import { VAceEditor } from 'vue3-ace-editor'
@@ -292,7 +290,6 @@ const resourceIcon = ref({
   "vm": "laptop"
 })
 const refAdd = ref(null)
-const refDeploy = ref(null)
 const k8scluster = ref({})
 /* 生命周期函数 */
 onBeforeMount(async () => {
@@ -304,6 +301,9 @@ const getInfo = async () => {
   applicationInfo.value = await axios.get(`/lizardcd/db/application/${route.params.id}`)
   if(applicationInfo.value.repo_id !== 0) {
     repoInfo.value = await axios.get(`/lizardcd/db/image_repository/${applicationInfo.value.repo_id}`)
+  }
+  if(applicationInfo.value.auto_build?.template_id) {
+    applicationInfo.value.template = await axios.get(`/lizardcd/db/yaml_template/${applicationInfo.value.auto_build.template_id}`)
   }
   workloads.value = {}
   if(applicationInfo.value.gitops) {
@@ -341,7 +341,12 @@ const getClusterList = async () => {
 const handleCommand = async (command) => {
   switch(command) {
     case "release": {
-      refDeploy.value.open()
+      router.push({
+        path: '/application/release',
+        query: {
+          app_name: applicationInfo.value.app_name
+        }
+      })
       break
     }
     case "edit": {

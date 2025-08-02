@@ -1,0 +1,49 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: lizardcd-lizardcd-initjob
+  namespace: lizardcd
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 3
+  template:
+    spec:
+      volumes:
+        - name: lizardcd-data
+          persistentVolumeClaim:
+            claimName: lizardcd-data
+      containers:
+        - name: container-migrate
+          image: lizardcd/migrate:v1.5.5
+          args:
+            - '--db-host'
+            - 'localhost'
+            - --db-port
+            - '4000'
+            - --db-password
+            - lizardcd
+            - --db-type
+            - tidb
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+            requests:
+              cpu: 50m
+              memory: 100Mi
+          volumeMounts:
+            - name: lizardcd-data
+              mountPath: /var/data/lizardcd
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: OnFailure
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: default
+      serviceAccount: default
+      securityContext: {}
+      schedulerName: default-scheduler
+  completionMode: NonIndexed
+  suspend: false

@@ -7,6 +7,8 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
@@ -31,27 +33,37 @@ func NewSethpaLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SethpaLogi
 
 func (l *SethpaLogic) Sethpa(req *types.HpaReq) (resp *types.Response, err error) {
 	var ag lizardagent.LizardAgent
-	if ag, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
+	var ks *commonsvc.K8sService
+	if ag, ks, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
 		return
 	}
-	var rpcResponse *agent.Response
-	if rpcResponse, err = ag.SetPodHorizonAutoscaler(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.SetPodHorizonAutoscaler"), &agent.HpaRequest{
-		Namespace:    req.Namespace,
-		WorkloadName: req.WorkloadName,
-		Max:          req.Max,
-		Min:          req.Min,
-		Cpu:          req.Cpu,
-		Memory:       req.Memory,
-	}); err != nil {
-		l.Logger.Error(err)
-		return
+	var data *autov2.HorizontalPodAutoscaler
+	if ag != nil {
+		var rpcResponse *agent.Response
+		if rpcResponse, err = ag.SetPodHorizonAutoscaler(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.SetPodHorizonAutoscaler"), &agent.HpaRequest{
+			Namespace:    req.Namespace,
+			WorkloadName: req.WorkloadName,
+			Max:          req.Max,
+			Min:          req.Min,
+			Cpu:          req.Cpu,
+			Memory:       req.Memory,
+		}); err != nil {
+			l.Logger.Error(err)
+			return
+		}
+		json.Unmarshal(rpcResponse.Data, &data)
+	} else if ks != nil && ks.IsValid() {
+		if data, err = ks.SetPodHorizonAutoscaler(req.Namespace, req.WorkloadName, &req.Max, &req.Min, &req.Cpu, &req.Memory); err != nil {
+			l.Logger.Error(err)
+			return
+		}
+	} else {
+		return nil, errorx.NewDefaultError("Cannot SetPodHorizonAutoscaler of cluster=%s namespace=%s workload=%s", req.Cluster, req.Namespace, req.WorkloadName)
 	}
-	var r *autov2.HorizontalPodAutoscaler
-	json.Unmarshal(rpcResponse.Data, &r)
 	resp = &types.Response{
 		Code:    http.StatusOK,
 		Message: "设置HPA成功",
-		Data:    r,
+		Data:    data,
 	}
 	return
 }

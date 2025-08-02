@@ -6,6 +6,8 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
@@ -29,19 +31,32 @@ func NewDeleteTektonLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Dele
 
 func (l *DeleteTektonLogic) DeleteTekton(req *types.ResourceReq) (resp *types.Response, err error) {
 	var ag lizardagent.LizardAgent
-	if ag, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
+	var ks *commonsvc.K8sService
+	if ag, ks, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
 		return
 	}
-	if _, err = ag.DeleteTektonResource(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.ListTektonResource"), &agent.TektonYamlRequest{
-		Namespace:    req.Namespace,
-		ResourceType: req.ResourceType,
-		ResourceName: req.ResourceName,
-	}); err != nil {
-		l.Logger.Error(err)
-		return &types.Response{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
-		}, nil
+	if ag != nil {
+		if _, err = ag.DeleteTektonResource(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "rpc.DeleteTektonResource"), &agent.TektonYamlRequest{
+			Namespace:    req.Namespace,
+			ResourceType: req.ResourceType,
+			ResourceName: req.ResourceName,
+		}); err != nil {
+			l.Logger.Error(err)
+			return &types.Response{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
+		}
+	} else if ks != nil && ks.IsValid() {
+		if err = ks.TektonService.DeleteResource(req.Namespace, req.ResourceType, req.ResourceName); err != nil {
+			l.Logger.Error(err)
+			return &types.Response{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
+		}
+	} else {
+		return nil, errorx.NewDefaultError("Cannot DeleteTektonResource of cluster=%s namespace=%s", req.Cluster, req.Namespace)
 	}
 	return &types.Response{
 		Code: http.StatusOK,

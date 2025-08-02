@@ -12,10 +12,18 @@ const router = createRouter({
       component: () => import("../views/home.vue")
     },
     {
+      path: '/profile',
+      name: 'profile',
+      meta: {
+        description: "个人设置",
+      },
+      component: () => import("../views/platform/profile.vue")
+    },
+    {
       path: '/agent',
       name: 'agent',
       meta: {
-        description: "Agent管理",
+        description: "连接管理",
       },
       component: () => import("../views/agent.vue")
     },
@@ -28,37 +36,165 @@ const router = createRouter({
       component: () => import("../views/template.vue")
     },
     {
-      path: '/workload/deployments',
+      path: '/kubernetes/workload',
       name: '',
       meta: {
-        description: "部署",
+        description: "工作负载",
       },
-      component: () => import("../views/workload/deployments.vue")
+      component: () => import("../views/kubernetes/workload/workload.vue")
     },
     {
-      path: '/workload/statefulsets',
+      path: '/kubernetes/services',
       name: '',
       meta: {
-        description: "有状态副本集",
+        description: "服务",
       },
-      component: () => import("../views/workload/statefulsets.vue")
+      component: () => import("../views/kubernetes/service/services.vue")
     },
     {
-      path: '/workload/deployments/:workload_name',
+      path: '/kubernetes/services/:service_name',
+      name: '',
+      meta: {
+        description: "服务详情",
+      },
+      component: () => import("../views/kubernetes/service/service.vue")
+    },
+    {
+      path: '/kubernetes/workload/deployments/:workload_name',
       name: '',
       meta: {
         description: "部署详情",
       },
-      component: () => import("../views/workload/deployment.vue")
+      component: () => import("../views/kubernetes/workload/deployment.vue")
     },
     {
-      path: '/workload/statefulsets/:workload_name',
+      path: '/kubernetes/workload/statefulsets/:workload_name',
       name: '',
       meta: {
         description: "有状态副本集详情",
       },
-      component: () => import("../views/workload/statefulset.vue")
+      component: () => import("../views/kubernetes/workload/statefulset.vue")
     },
+    {
+      path: '/kubernetes/ingresses',
+      name: '',
+      meta: {
+        description: "路由",
+      },
+      component: () => import("../views/kubernetes/ingress/ingresses.vue")
+    },
+    {
+      path: '/kubernetes/ingresses/:ingress_name',
+      name: '',
+      meta: {
+        description: "路由详情",
+      },
+      component: () => import("../views/kubernetes/ingress/ingress.vue")
+    },
+    {
+      path: '/kubernetes/workload/pods',
+      name: '',
+      meta: {
+        description: "容器组",
+      },
+      component: () => import("../views/kubernetes/workload/pods.vue")
+    },
+    {
+      path: '/kubernetes/workload/pods/:pod_name',
+      name: '',
+      meta: {
+        description: "容器组详情",
+      },
+      component: () => import("../views/kubernetes/workload/pod.vue")
+    },
+    {
+      path: '/kubernetes/jobs',
+      name: '',
+      meta: {
+        description: "任务",
+      },
+      component: () => import("../views/kubernetes/job/jobs.vue")
+    },
+    {
+      path: '/kubernetes/jobs/:job_name',
+      name: '',
+      meta: {
+        description: "任务详情",
+      },
+      component: () => import("../views/kubernetes/job/job.vue")
+    },
+    {
+      path: '/kubernetes/cronjobs/:job_name',
+      name: '',
+      meta: {
+        description: "定时任务详情",
+      },
+      component: () => import("../views/kubernetes/job/cronjob.vue")
+    },
+    {
+      path: '/kubernetes/persistentvolumeclaims',
+      name: '',
+      meta: {
+        description: "存储卷",
+      },
+      component: () => import("../views/kubernetes/pvc/pvcs.vue")
+    },
+    {
+      path: '/kubernetes/persistentvolumeclaims/:pvc_name',
+      name: '',
+      meta: {
+        description: "存储卷详情",
+      },
+      component: () => import("../views/kubernetes/pvc/pvc.vue")
+    },
+    {
+      path: '/kubernetes/configmaps',
+      name: '',
+      meta: {
+        description: "配置字典",
+      },
+      component: () => import("../views/kubernetes/config/configmaps.vue")
+    },
+    {
+      path: '/kubernetes/configmaps/:configmap_name',
+      name: '',
+      meta: {
+        description: "配置字典详情",
+      },
+      component: () => import("../views/kubernetes/config/configmap.vue")
+    },
+    {
+      path: '/kubernetes/secrets',
+      name: '',
+      meta: {
+        description: "保密字典",
+      },
+      component: () => import("../views/kubernetes/config/secrets.vue")
+    },
+    {
+      path: '/kubernetes/secrets/:secret_name',
+      name: '',
+      meta: {
+        description: "保密字典详情",
+      },
+      component: () => import("../views/kubernetes/config/secret.vue")
+    },
+    {
+      path: '/kubernetes/serviceaccounts',
+      name: '',
+      meta: {
+        description: "服务账户",
+      },
+      component: () => import("../views/kubernetes/config/serviceaccounts.vue")
+    },
+    // {
+    //   path: '/kubernetes/serviceaccounts/:serviceaccount_name',
+    //   name: '',
+    //   meta: {
+    //     description: "保密字典详情",
+    //   },
+    //   component: () => import("../views/kubernetes/config/serviceaccount.vue")
+    // },
     {
       path: '/platform/settings',
       name: '',
@@ -92,6 +228,22 @@ const router = createRouter({
       component: () => import("../views/task/history.vue")
     },
     {
+      path: '/task/history/:id',
+      name: '',
+      meta: {
+        description: "任务详情",
+      },
+      component: () => import("../views/task/detail.vue")
+    },
+    {
+      path: '/application/release',
+      name: '',
+      meta: {
+        description: "应用发布",
+      },
+      component: () => import("../views/application/release.vue")
+    },
+    {
       path: '/mesh/istio',
       name: '',
       meta: {
@@ -103,17 +255,41 @@ const router = createRouter({
       path: '/ci/tekton',
       name: '',
       meta: {
-        description: "Tekton管理",
+        description: "流水线",
       },
       component: () => import("../views/tekton/tekton.vue")
+    },
+    {
+      path: '/ci/tekton/pipelinerun/:name',
+      name: '',
+      meta: {
+        description: "PipelineRun",
+      },
+      component: () => import("../views/tekton/pipelinerun/pipelinerunresult.vue")
+    },
+    {
+      path: '/ci/tekton/taskrun/:name',
+      name: '',
+      meta: {
+        description: "TaskRun",
+      },
+      component: () => import("../views/tekton/taskrun/taskrunresult.vue")
+    },
+    {
+      path: '/ci/tekton/create',
+      name: '',
+      meta: {
+        description: "创建流水线",
+      },
+      component: () => import("../views/tekton/pipeline/visualcreate.vue")
     },
     {
       path: '/ci/trigger',
       name: '',
       meta: {
-        description: "精准触发",
+        description: "触发配置",
       },
-      component: () => import("../views/tekton/trigger.vue")
+      component: () => import("../views/tekton/trigger/trigger.vue")
     },
     {
       path: '/helm',

@@ -26,7 +26,7 @@
       </el-table-column>
       <el-table-column prop="name" label="名称" min-width="150">
         <template #default="scope">
-          <el-link :href="`/helm/${scope.row.name}`" :underline="false">{{ scope.row.name }}</el-link>
+          <el-link :href="`/helm/${scope.row.name}`" underline="never">{{ scope.row.name }}</el-link>
         </template>
       </el-table-column>
       <el-table-column prop="url" label="URL" min-width="350" />
@@ -94,9 +94,9 @@
     style="width:100%;margin-top:10px;min-height:150px">
     <el-table-column prop="cluster" label="集群" min-width="150" />
     <el-table-column prop="namespace" label="命名空间" min-width="150" />
-    <el-table-column label="操作" width="80">
+    <el-table-column label="操作" width="90">
       <template #default="scope">
-        <el-link type="primary" :underline="false" :disabled="scope.row.loading" @click="updateRepo(scope.row)">更新仓库</el-link>
+        <el-link type="primary" underline="never" :disabled="scope.row.loading" @click="updateRepo(scope.row)">更新仓库</el-link>
       </template>
     </el-table-column>
   </el-table>

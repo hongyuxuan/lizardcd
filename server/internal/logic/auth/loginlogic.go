@@ -26,14 +26,14 @@ func NewLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginLogic 
 }
 
 func (l *LoginLogic) Login(req *types.LoginReq) (resp *commontypes.LoginRes, err error) {
-	if err = utils.ValidatedUser(req.Username, req.Password, l.svcCtx.Sqlite); err != nil {
+	if err = utils.ValidatedUser(req.Username, req.Password, l.svcCtx.Database); err != nil {
 		return
 	}
 	l.Logger.Infof("User \"%s\" login success", req.Username)
 
 	// get user info
 	var user commontypes.User
-	if err = l.svcCtx.Sqlite.Model(&commontypes.User{}).Where("username = ?", req.Username).WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetUser")).First(&user).Error; err != nil {
+	if err = l.svcCtx.Database.Model(&commontypes.User{}).Where("username = ?", req.Username).WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetUser")).First(&user).Error; err != nil {
 		l.Logger.Error(err)
 		return
 	}

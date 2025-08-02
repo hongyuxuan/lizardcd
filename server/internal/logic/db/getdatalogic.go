@@ -47,7 +47,7 @@ func (l *GetdataLogic) Getdata(req *types.DataByIdReq) (resp *types.Response, er
 		break
 	case "task_history":
 		var taskHistory commontypes.TaskHistory
-		tx := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetTaskHistory"))
+		tx := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetTaskHistory"))
 		if role != constant.ROLE_ADMIN {
 			tx.Where("tenant IN ?", tenant)
 		}
@@ -62,7 +62,7 @@ func (l *GetdataLogic) Getdata(req *types.DataByIdReq) (resp *types.Response, er
 		break
 	default:
 		data := map[string]interface{}{}
-		tx := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetData")).Table(req.Tablename).Where("id = ?", req.Id)
+		tx := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.GetData")).Table(req.Tablename).Where("id = ?", req.Id)
 		if role != constant.ROLE_ADMIN {
 			tx.Where("tenant IN ?", tenant)
 		}

@@ -35,7 +35,7 @@ func (l *GeneratetokenLogic) Generatetoken(req *types.GenereateTokenReq) (resp *
 		return nil, errorx.NewError(http.StatusForbidden, "not permitted", nil)
 	}
 	var user commontypes.User
-	if err = l.svcCtx.Sqlite.First(&user, "id = ?", req.UserId).Error; err != nil {
+	if err = l.svcCtx.Database.First(&user, "id = ?", req.UserId).Error; err != nil {
 		return nil, fmt.Errorf("user_id = %d not found", req.UserId)
 	}
 	var accessToken string

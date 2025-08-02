@@ -5,6 +5,8 @@ import (
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -27,18 +29,30 @@ func NewGetValuesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetValu
 
 func (l *GetValuesLogic) GetValues(req *types.ListReleasesReq) (content string, err error) {
 	var ag lizardagent.LizardAgent
-	if ag, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
+	var ks *commonsvc.K8sService
+	var r []byte
+	if ag, ks, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
 		return
 	}
-	var rpcResponse *agent.Response
-	if rpcResponse, err = ag.HelmGetValues(l.ctx, &lizardagent.ListReleasesRequest{
-		Namespace:   req.Namespace,
-		ReleaseName: req.ReleaseName,
-		Revision:    req.Revision,
-	}); err != nil {
-		l.Logger.Error(err)
-		return
+	if ag != nil {
+		var rpcResponse *agent.Response
+		if rpcResponse, err = ag.HelmGetValues(l.ctx, &lizardagent.ListReleasesRequest{
+			Namespace:   req.Namespace,
+			ReleaseName: req.ReleaseName,
+			Revision:    req.Revision,
+		}); err != nil {
+			l.Logger.Error(err)
+			return
+		}
+		r = rpcResponse.Data
+	} else if ks != nil && ks.IsValid() {
+		if r, err = ks.HelmService.GetValues(req.Namespace, req.ReleaseName, int(req.Revision)); err != nil {
+			l.Logger.Error(err)
+			return
+		}
+	} else {
+		return "", errorx.NewDefaultError("Cannot HelmGetValues of cluster=%s namespace=%s", req.Cluster, req.Namespace)
 	}
-	content = string(rpcResponse.Data)
+	content = string(r)
 	return
 }

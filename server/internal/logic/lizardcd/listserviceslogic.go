@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/hongyuxuan/lizardcd/common/constant"
+	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
@@ -29,24 +30,24 @@ func NewListservicesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *List
 
 func (l *ListservicesLogic) Listservices() (resp *types.Response, err error) {
 	_, role, _, namespaces := utils.GetPayload(l.ctx)
-	var services []map[string]string
-	for k, v := range l.svcCtx.AgentList {
-		meta, _ := utils.GetServiceMata(l.svcCtx.Config.ServicePrefix, k)
-		if _, ok := lo.Find(namespaces, func(s string) bool {
-			if meta != nil {
-				return s == meta["Namespace"]
+	services := lo.Filter(l.svcCtx.ListServices(role, namespaces), func(svc *commontypes.ServiceMeta, _ int) bool {
+		if svc.Namespace != "*" {
+			if _, ok := lo.Find(namespaces, func(s string) bool {
+				return s == svc.Namespace
+			}); !ok && role != constant.ROLE_ADMIN {
+				return false
+			}
+			return true
+		} else {
+			nss := l.svcCtx.GetNamespaces(svc.ServiceName)
+			if found := lo.Intersect(nss, namespaces); len(found) > 0 || role == constant.ROLE_ADMIN {
+				return true
 			}
 			return false
-		}); !ok && role != constant.ROLE_ADMIN {
-			continue
 		}
-		services = append(services, map[string]string{
-			"service_name":   k,
-			"service_source": v.ServiceSource,
-		})
-	}
-	if services == nil {
-		services = []map[string]string{}
+	})
+	if len(services) == 0 {
+		services = []*commontypes.ServiceMeta{}
 	}
 	resp = &types.Response{
 		Code: http.StatusOK,

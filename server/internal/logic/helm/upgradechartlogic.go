@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
+	"github.com/hongyuxuan/lizardcd/common/errorx"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
@@ -39,29 +41,39 @@ func (l *UpgradeChartLogic) UpgradeChart(req *types.InstallChartReq) (resp *type
 	ctx, cancel := context.WithTimeout(l.ctx, 2*time.Second)
 	defer cancel()
 	var ag lizardagent.LizardAgent
-	if ag, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
+	var ks *commonsvc.K8sService
+	if ag, ks, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
 		return
 	}
-	if _, err = ag.HelmUpgradeChart(ctx, &lizardagent.HelmInstallChartRequest{
-		RepoUrl:      req.RepoUrl,
-		Namespace:    req.Namespace,
-		ChartName:    req.ChartName,
-		ChartVersion: req.ChartVersion,
-		ReleaseName:  req.ReleaseName,
-		Revision:     req.Revision,
-		Values:       []byte(req.Values),
-		Wait:         wait,
-		Timeout:      timeout,
-	}); err != nil {
-		if strings.Contains(err.Error(), "DeadlineExceeded") { // timeout because --wait
-			resp = &types.Response{
-				Code:    http.StatusOK,
-				Message: "重装任务已提交",
+	if ag != nil {
+		if _, err = ag.HelmUpgradeChart(ctx, &lizardagent.HelmInstallChartRequest{
+			RepoUrl:      req.RepoUrl,
+			Namespace:    req.Namespace,
+			ChartName:    req.ChartName,
+			ChartVersion: req.ChartVersion,
+			ReleaseName:  req.ReleaseName,
+			Revision:     req.Revision,
+			Values:       []byte(req.Values),
+			Wait:         wait,
+			Timeout:      timeout,
+		}); err != nil {
+			if strings.Contains(err.Error(), "DeadlineExceeded") { // timeout because --wait
+				resp = &types.Response{
+					Code:    http.StatusOK,
+					Message: "重装任务已提交",
+				}
+				return resp, nil
 			}
-			return resp, nil
+			l.Logger.Error(err)
+			return
 		}
-		l.Logger.Error(err)
-		return
+	} else if ks != nil && ks.IsValid() {
+		if err = ks.HelmService.UpgradeChart(req.Namespace, req.RepoUrl, req.ReleaseName, req.ChartName, req.ChartVersion, int(req.Revision), []byte(req.Values), wait, time.Duration(timeout)*time.Second); err != nil {
+			l.Logger.Error(err)
+			return
+		}
+	} else {
+		return nil, errorx.NewDefaultError("Cannot HelmUpgradeChart of cluster=%s namespace=%s", req.Cluster, req.Namespace)
 	}
 	resp = &types.Response{
 		Code:    http.StatusOK,

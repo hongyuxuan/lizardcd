@@ -31,7 +31,7 @@ func NewListVirtualServiceLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 
 func (l *ListVirtualServiceLogic) ListVirtualService(req *types.ListWorkloadReq) (resp *types.Response, err error) {
 	var ag lizardagent.LizardAgent
-	if ag, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
+	if ag, _, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
 		return
 	}
 	var rpcResponse *agent.Response

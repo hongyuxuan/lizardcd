@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/hongyuxuan/lizardcd/common/errorx"
@@ -9,6 +10,22 @@ import (
 	syaml "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	uyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
+
+func ParseYaml(namespace, yamlContent string) (unstructureList []*unstructured.Unstructured, err error) {
+	d := uyaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(yamlContent), 4096)
+	var unstructureObj *unstructured.Unstructured
+	for {
+		unstructureObj, err = GetUnstructured(d)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return
+		}
+		unstructureList = append(unstructureList, unstructureObj)
+	}
+	return unstructureList, nil
+}
 
 func GetUnstructured(d *uyaml.YAMLOrJSONDecoder) (unstructureObj *unstructured.Unstructured, err error) {
 	var rawObj runtime.RawExtension

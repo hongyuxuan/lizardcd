@@ -56,7 +56,7 @@ func (r *ApplicationRepository) Save(body map[string]interface{}, tenant string,
 		r.Logger.Error(err)
 		return
 	}
-	if err = r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.SaveApplication")).
+	if err = r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.SaveApplication")).
 		Save(&r.application).Error; err != nil {
 		r.Logger.Error(err)
 		return
@@ -78,7 +78,7 @@ func (r *ApplicationRepository) Save(body map[string]interface{}, tenant string,
 		}
 		// add autosync
 		if r.application.GitOps.SyncType == constant.APP_SYNC_TYPE_AUTO {
-			if err = r.cronService.AddCron(*r.application, tenant); err != nil {
+			if err = r.cronService.AddGitOpsCron(*r.application, tenant); err != nil {
 				r.Logger.Error(err)
 				return
 			}
@@ -90,7 +90,7 @@ func (r *ApplicationRepository) Save(body map[string]interface{}, tenant string,
 func (r *ApplicationRepository) SaveFaas(body map[string]interface{}, ifCreate bool) (id interface{}, err error) {
 	b, _ := json.Marshal(body)
 	json.Unmarshal(b, &r.applicationFaas)
-	if err = r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.CreateApplicationFaas")).
+	if err = r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.CreateApplicationFaas")).
 		Save(&r.applicationFaas).Error; err != nil {
 		return
 	}
@@ -123,7 +123,7 @@ func (r *ApplicationRepository) SaveFaas(body map[string]interface{}, ifCreate b
 			},
 		}
 	}
-	r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.UpdateApplication")).
+	r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.UpdateApplication")).
 		Table("application").
 		Where("id = ?", r.applicationFaas.ApplicationId).
 		Updates(commontypes.Application{
@@ -146,12 +146,12 @@ func (r *ApplicationRepository) SaveFaas(body map[string]interface{}, ifCreate b
 
 func (r *ApplicationRepository) Delete(id, tenant string) (err error) {
 	var application commontypes.Application
-	if err = r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).First(&application, "id = ?", id).Error; err != nil {
+	if err = r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).First(&application, "id = ?", id).Error; err != nil {
 		r.Logger.Error(err)
 		return
 	}
 	// delete application
-	if err = r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplication")).Delete(&commontypes.Application{}, id).Error; err != nil {
+	if err = r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplication")).Delete(&commontypes.Application{}, id).Error; err != nil {
 		return
 	}
 	r.Logger.Infof("Successfully delete application %s", application.AppName)
@@ -166,7 +166,7 @@ func (r *ApplicationRepository) Delete(id, tenant string) (err error) {
 		}
 		var ag lizardagent.LizardAgent
 		for _, workload := range application.Workload {
-			if ag, err = r.svcCtx.GetAgent(workload.Cluster, workload.Namespace); err != nil {
+			if ag, _, err = r.svcCtx.GetAgent(workload.Cluster, workload.Namespace); err != nil {
 				return
 			}
 			if _, err = ag.DeleteYaml(r.ctx, &lizardagent.YamlRequest{
@@ -180,12 +180,12 @@ func (r *ApplicationRepository) Delete(id, tenant string) (err error) {
 		}
 	}
 	// delete application_resource
-	if err = r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplicationResource")).Delete(&commontypes.ApplicationResource{}, "application_id = ?", id).Error; err != nil {
+	if err = r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplicationResource")).Delete(&commontypes.ApplicationResource{}, "application_id = ?", id).Error; err != nil {
 		return
 	}
 	r.Logger.Infof("Successfully delete application_resource for application=%s", application.AppName)
 	// delete application_fass
-	if err = r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplicationFaas")).Delete(&commontypes.ApplicationFaas{}, "application_id = ?", id).Error; err != nil {
+	if err = r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteApplicationFaas")).Delete(&commontypes.ApplicationFaas{}, "application_id = ?", id).Error; err != nil {
 		return
 	}
 	r.Logger.Infof("Successfully delete application_fass for application=%s", application.AppName)
@@ -193,20 +193,23 @@ func (r *ApplicationRepository) Delete(id, tenant string) (err error) {
 }
 
 func (r *ApplicationRepository) Get(id, role string, tenant []string) (application *commontypes.Application, err error) {
-	tx := r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).Model(&commontypes.Application{})
+	tx := r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.GetApplication")).Model(&commontypes.Application{})
 	if role != constant.ROLE_ADMIN {
 		tx.Where("tenant IN ?", tenant)
 	}
-	if err = tx.Preload("Template").First(&application, "id = ?", id).Error; err != nil {
+	if err = tx.First(&application, "id = ?", id).Error; err != nil {
 		return nil, fmt.Errorf("error in GetApplication: %w", err)
 	}
+	// if err = tx.Preload("Template").First(&application, "id = ?", id).Error; err != nil {
+	// 	return nil, fmt.Errorf("error in GetApplication: %w", err)
+	// }
 	return
 }
 
 func (r *ApplicationRepository) ListResource(req *commontypes.GetDataReq) (resp *types.Response, err error) {
 	_, role, tenant, _ := utils.GetPayload(r.ctx)
 	var data []commontypes.ApplicationResource
-	tx := r.svcCtx.Sqlite.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.ListApplicationResource")).Model(&commontypes.ApplicationResource{})
+	tx := r.svcCtx.Database.WithContext(context.WithValue(r.ctx, commontypes.TraceIDKey{}, "sqlite.ListApplicationResource")).Model(&commontypes.ApplicationResource{})
 	utils.SetTx(tx, req, nil, role, tenant, nil)
 	if err = tx.Find(&data).Error; err != nil {
 		r.Logger.Error(err)
@@ -242,7 +245,7 @@ func (r *ApplicationRepository) saveIstio(appName, trafficPolicy string, workloa
 	cluster := workloads[0].Cluster
 	namespace := workloads[0].Namespace
 	var ag lizardagent.LizardAgent
-	if ag, err = r.svcCtx.GetAgent(cluster, namespace); err != nil {
+	if ag, _, err = r.svcCtx.GetAgent(cluster, namespace); err != nil {
 		return
 	}
 	if err = r.istioService.SaveDestinationRule(cluster, namespace, appName, workloads, ag, ifCreate); err != nil { // create destinationrule

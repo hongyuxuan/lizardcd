@@ -44,12 +44,12 @@ func (l *CreatedataLogic) Createdata(req *types.CreateDataReq) (resp *types.Resp
 	case "git_repository":
 		data["id"], err = l.ciRepository.SaveGitRepository(req.Body)
 	case "tenant":
-		if err = l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.CreateTenant")).Table(req.Tablename).Create(&req.Body).Error; err != nil {
+		if err = l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.CreateTenant")).Table(req.Tablename).Create(&req.Body).Error; err != nil {
 			return
 		}
-		utils.AddSettings(req.Body["tenant_name"].(string), l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.SaveSettings")))
+		utils.AddSettings(req.Body["tenant_name"].(string), l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.SaveSettings")))
 	default:
-		l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.CreateData")).Table(req.Tablename).Create(&req.Body)
+		l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.CreateData")).Table(req.Tablename).Create(&req.Body)
 	}
 	resp = &types.Response{
 		Code:    http.StatusOK,

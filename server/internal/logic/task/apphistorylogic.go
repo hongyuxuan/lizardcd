@@ -39,7 +39,7 @@ func (l *ApphistoryLogic) Apphistory(req *types.AppHistoryReq) (resp *types.Resp
 			wg.Add(1)
 			go func(app string, size int, sort string, ch chan []commontypes.TaskHistory) {
 				var history []commontypes.TaskHistory
-				tx := l.svcCtx.Sqlite.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListTaskHistory")).Model(commontypes.TaskHistory{})
+				tx := l.svcCtx.Database.WithContext(context.WithValue(l.ctx, commontypes.TraceIDKey{}, "sqlite.ListTaskHistory")).Model(commontypes.TaskHistory{})
 				var count int64
 				utils.SetTx(tx, &commontypes.GetDataReq{
 					Tablename: "task_history",

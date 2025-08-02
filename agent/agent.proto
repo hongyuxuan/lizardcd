@@ -7,18 +7,23 @@ option go_package = "./agent";
 /********* Kubernetes *********/
 message PatchWorkloadRequest {
   string namespace = 1;
-  string workload_name = 2;
-  string container = 3;
-  string image = 4;
+  string workload_type = 2;
+  string workload_name = 3;
+  string container = 4;
+  string image = 5;
 }
 message ListResourceRequest {
   string namespace = 1;
-  string label_selector = 2;
+  string resource_type = 2;
+  string label_selector = 3;
+  string field_selector = 4;
+  string continue = 5;
+  int64  limit = 6;
 }
-message GetWorkloadRequest {
+message GetResourceRequest {
   string namespace = 1;
-  string workload_name = 2;
-  string workload_type = 3;
+  string resource_type = 2;
+  string resource_name = 3;
 }
 message GetEventRequest {
   string namespace = 1;
@@ -30,10 +35,6 @@ message YamlRequest {
   string ymlstring = 2;
   string kind = 3;
 }
-message RolloutWorkloadRequest {
-  string namespace = 1;
-  string workload_name = 2;
-}
 message GetYamlRequest {
   string namespace = 1;
   string resource_type = 2;
@@ -41,13 +42,15 @@ message GetYamlRequest {
 }
 message ScaleRequest {
   string namespace = 1;
-  string workload_name = 2;
-  uint32 replicas = 3;
+  string workload_type = 2;
+  string workload_name = 3;
+  uint32 replicas = 4;
 }
 message ReplicaRequest {
   string namespace = 1;
-  repeated string workloads = 2;
-  bool init_container = 3;
+  string workload_type = 2;
+  repeated string workloads = 3;
+  bool init_container = 4;
 }
 message LabelSelector {
   string label_selector = 1;
@@ -57,6 +60,13 @@ message PodLogRequest {
   string podname = 2;
   string container_name = 3;
   uint64 lines = 4;
+  bool   timestamps = 5;
+}
+message PodCommandRequest {
+  string namespace = 1;
+  string podname = 2;
+  string container_name = 3;
+  string command = 4;
 }
 message HpaRequest {
   string namespace = 1;
@@ -65,6 +75,19 @@ message HpaRequest {
   int32 min = 4;
   int32 cpu = 5;
   int32 memory = 6;
+}
+message DeleteResourceRequest {
+  string namespace = 1;
+  string resource_type = 2;
+  string resource_name = 3;
+  bool   force = 4;
+}
+message PatchConfigmapRequest {
+  string namespace = 1;
+  string resource_type = 2;
+  string resource_name = 3;
+  string key = 4;
+  string value = 5;
 }
 message Response {
   uint32 code = 1;
@@ -75,7 +98,6 @@ message YamlResponse {
   uint32 code = 1;
   string data = 2;
 }
-
 
 /********* Istio *********/
 message IstioCreateRequest {
@@ -97,12 +119,22 @@ message TektonListRequest {
   string namespace = 1;
   string resource_type = 2;
   string label_selector = 3;
+  string field_selector = 4;
+  string continue = 5;
+  int64  limit = 6;
 }
 message TektonYamlRequest {
   string namespace = 1;
   string resource_type = 2;
   string resource_name = 3;
   string ymlstring = 4; 
+  string with_status = 5;
+}
+message TektonPatchRequest {
+  string namespace = 1;
+  string resource_type = 2;
+  string resource_name = 3;
+  bytes  patch_options = 4;
 }
 message TektonEndpointRequest {}
 
@@ -133,8 +165,9 @@ message VmDeployRequest {
   bytes  artifact_header = 2;
   string deploy_path = 3;
   string deploy_user = 4;
-  string pre_command = 5;
-  string start_command = 6;
+  string command_type = 5;
+  string pre_command = 6;
+  string start_command = 7;
 }
 message VmHealthCheckRequest {
   string type = 1;
@@ -143,37 +176,51 @@ message VmHealthCheckRequest {
   string method = 4;
   string shell = 5;
 }
+message RunCommandRequest {
+  string run_user = 1;
+  string command = 2;
+  bytes byte_command = 3;
+  string command_type = 4;
+  bool reserve_tmp = 5;
+}
+message FileRequest {
+  string filename = 1;
+}
+message dockerDeployRequest {
+  string container_name = 1;
+  string image = 2;
+  string network = 3;
+  string ports = 4;
+  string volumes = 5;
+  string dns = 6;
+  string working_dir = 7;
+  repeated string command = 8;
+}
 
 service LizardAgent {
   // kubernetes
-  rpc patchDeployment(PatchWorkloadRequest) returns(Response);
-  rpc patchStatefulset(PatchWorkloadRequest) returns(Response);
-  rpc listDeployment(ListResourceRequest) returns(Response);
-  rpc listStatefulset(ListResourceRequest) returns(Response);
-  rpc deleteDeployment(GetWorkloadRequest) returns(Response);
-  rpc deleteStatefulset(GetWorkloadRequest) returns(Response);
-  rpc getDeploymentPod(GetWorkloadRequest) returns(Response);
-  rpc getStatefulsetPod(GetWorkloadRequest) returns(Response);
+  rpc getNamespaces(LabelSelector) returns(Response);
+  rpc listResource(ListResourceRequest) returns(Response);
+  rpc getResource(GetResourceRequest) returns(Response);
+  rpc deleteResource(DeleteResourceRequest) returns(Response);
+  rpc patchWorkload(PatchWorkloadRequest) returns(Response);
+  rpc rolloutWorkload(PatchWorkloadRequest) returns(Response);
+  rpc scaleWorkload(ScaleRequest) returns(Response);
   rpc getEvent(GetEventRequest) returns(Response);
-  rpc getPodStatus(GetWorkloadRequest) returns(Response);
+  rpc getResourceStatus(GetResourceRequest) returns(Response);
   rpc deleteYaml(YamlRequest) returns(Response);
   rpc applyYaml(YamlRequest) returns(Response);
-  rpc getyaml(GetYamlRequest) returns(YamlResponse);
-  rpc rolloutDeployment(RolloutWorkloadRequest) returns(Response);
-  rpc rolloutStatefulset(RolloutWorkloadRequest) returns(Response);
-  rpc scaleDeployment(ScaleRequest) returns(Response);
-  rpc scaleStatefulset(ScaleRequest) returns(Response);
-  rpc getDeploymentReplicas(ReplicaRequest) returns(Response);
-  rpc getDeploymentImages(ReplicaRequest) returns(Response);
-  rpc getNamespaces(LabelSelector) returns(Response);
-  rpc getDeployment(GetWorkloadRequest) returns(Response);
-  rpc getStatefulset(GetWorkloadRequest) returns(Response);
-  rpc getDeploymentQuota(GetWorkloadRequest) returns(Response);
-  rpc getStatefulsetQuota(GetWorkloadRequest) returns(Response);
+  rpc getYaml(GetYamlRequest) returns(YamlResponse);
+  rpc getWorkloadPod(GetResourceRequest) returns(Response);
+  rpc getWorkloadReplicas(ReplicaRequest) returns(Response);
+  rpc getWorkloadImages(ReplicaRequest) returns(Response);
+  rpc getWorkloadQuota(GetResourceRequest) returns(Response);
   rpc getPodLog(PodLogRequest) returns(YamlResponse);
   rpc getPodLogFollow(PodLogRequest) returns(stream YamlResponse);
   rpc setPodHorizonAutoscaler(HpaRequest) returns(Response);
-  rpc getPodHorizonAutoscaler(RolloutWorkloadRequest) returns(Response);
+  rpc getPodHorizonAutoscaler(PatchWorkloadRequest) returns(Response);
+  rpc runCommandInPod(stream PodCommandRequest) returns(stream Response);
+  rpc patchConfigmap(PatchConfigmapRequest) returns(Response);
   // istio
   rpc createDestinationRule(IstioCreateRequest) returns(Response);
   rpc patchDestinationRule(IstioPatchRequest) returns(Response);
@@ -192,6 +239,7 @@ service LizardAgent {
   // tekton
   rpc listTektonResource(TektonListRequest) returns(Response);
   rpc getTektonResource(TektonYamlRequest) returns(Response);
+  rpc patchTektonResource(TektonPatchRequest) returns(Response);
   rpc getTektonYaml(TektonYamlRequest) returns(YamlResponse);
   rpc applyTektonResource(TektonYamlRequest) returns(Response);
   rpc deleteTektonResource(TektonYamlRequest) returns(Response);
@@ -208,4 +256,9 @@ service LizardAgent {
   // vm deploy
   rpc vmDeploy(VmDeployRequest) returns(Response);
   rpc vmHealthCheck(VmHealthCheckRequest) returns(Response);
+  rpc runCommand(RunCommandRequest) returns(stream YamlResponse);
+  rpc downloadFile(FileRequest) returns(stream Response);
+  // docker deploy
+  rpc dockerDeploy(dockerDeployRequest) returns(Response);
+  rpc dockerCheck(dockerDeployRequest) returns(Response);
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/hongyuxuan/lizardcd/agent/lizardagent"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
 	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
@@ -17,24 +18,24 @@ import (
 
 type UpdateChartsLogic struct {
 	logx.Logger
-	ctx      context.Context
-	svcCtx   *svc.ServiceContext
-	helmUtil *utils.HelmUtil
+	ctx         context.Context
+	svcCtx      *svc.ServiceContext
+	helmService *commonsvc.HelmService
 }
 
 func NewUpdateChartsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateChartsLogic {
 	return &UpdateChartsLogic{
-		Logger:   logx.WithContext(ctx),
-		ctx:      ctx,
-		svcCtx:   svcCtx,
-		helmUtil: utils.NewHelmUtil(ctx),
+		Logger:      logx.WithContext(ctx),
+		ctx:         ctx,
+		svcCtx:      svcCtx,
+		helmService: commonsvc.NewHelmService(ctx),
 	}
 }
 
 func (l *UpdateChartsLogic) UpdateCharts(req *types.ListWorkloadReq) (resp *types.Response, err error) {
 	_, _, tenant, _ := utils.GetPayload(l.ctx)
 	var res []*commontypes.HelmRepositories
-	if err = l.svcCtx.Sqlite.Where("tenant IN ?", tenant).Find(&res).Error; err != nil {
+	if err = l.svcCtx.Database.Where("tenant IN ?", tenant).Find(&res).Error; err != nil {
 		l.Logger.Error(err)
 		return
 	}
@@ -48,20 +49,22 @@ func (l *UpdateChartsLogic) UpdateCharts(req *types.ListWorkloadReq) (resp *type
 		})
 	}
 	// update repo for server
-	if err = l.helmUtil.Update(entries); err != nil {
+	if err = l.helmService.Update(entries); err != nil {
 		l.Logger.Error(err)
 		return
 	}
 
 	// update repo for agent
 	var ag lizardagent.LizardAgent
-	if ag, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
+	if ag, _, err = l.svcCtx.GetAgent(req.Cluster, req.Namespace); err != nil {
 		return
 	}
-	b, _ := json.Marshal(res)
-	if _, err = ag.HelmUpdateRepo(l.ctx, &lizardagent.HelmEntriesRequest{Entries: b}); err != nil {
-		l.Logger.Error(err)
-		return
+	if ag != nil {
+		b, _ := json.Marshal(res)
+		if _, err = ag.HelmUpdateRepo(l.ctx, &lizardagent.HelmEntriesRequest{Entries: b}); err != nil {
+			l.Logger.Error(err)
+			return
+		}
 	}
 	resp = &types.Response{
 		Code:    http.StatusOK,

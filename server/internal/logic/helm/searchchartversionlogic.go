@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
 	commontypes "github.com/hongyuxuan/lizardcd/common/types"
-	"github.com/hongyuxuan/lizardcd/common/utils"
 	"github.com/hongyuxuan/lizardcd/server/internal/svc"
 	"github.com/hongyuxuan/lizardcd/server/internal/types"
 
@@ -14,23 +14,23 @@ import (
 
 type SearchChartVersionLogic struct {
 	logx.Logger
-	ctx      context.Context
-	svcCtx   *svc.ServiceContext
-	helmUtil *utils.HelmUtil
+	ctx         context.Context
+	svcCtx      *svc.ServiceContext
+	helmService *commonsvc.HelmService
 }
 
 func NewSearchChartVersionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SearchChartVersionLogic {
 	return &SearchChartVersionLogic{
-		Logger:   logx.WithContext(ctx),
-		ctx:      ctx,
-		svcCtx:   svcCtx,
-		helmUtil: utils.NewHelmUtil(ctx),
+		Logger:      logx.WithContext(ctx),
+		ctx:         ctx,
+		svcCtx:      svcCtx,
+		helmService: commonsvc.NewHelmService(ctx),
 	}
 }
 
 func (l *SearchChartVersionLogic) SearchChartVersion(req *types.ChartReq) (resp *types.Response, err error) {
 	var res []*commontypes.ChartListResponse
-	if res, err = l.helmUtil.SearchChartVersions(req.Name, req.ChartName); err != nil {
+	if res, err = l.helmService.SearchChartVersions(req.Name, req.ChartName); err != nil {
 		return
 	}
 	resp = &types.Response{

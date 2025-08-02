@@ -43,7 +43,7 @@
 </template>
 <script setup>
 import { ref, inject, onMounted, onBeforeUnmount } from "vue";
-import { ArrowRight,Search,RefreshLeft,EditPen,Delete,Plus } from '@element-plus/icons-vue'
+import { ArrowRight } from '@element-plus/icons-vue'
 import moment from "moment"
 import { axios } from '/src/assets/util/axios.js'
 let echarts = inject("ec")

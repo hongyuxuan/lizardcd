@@ -76,17 +76,22 @@
       </el-form-item>
     </el-form>
   </el-card>
-  <v-md-preview :text="readme" v-else-if="activeIndex==='readme' && loading.values===false" />
-  <el-empty v-else-if="activeIndex==='readme' && loading.values===true" description="加载中，请稍后……" />
+  <div v-else-if="activeIndex==='readme' && loading.values===false" class="box box-body box-item">
+    <v-md-preview :text="readme"  :theme="githubTheme" />
+  </div>
+  <div v-else-if="activeIndex==='readme' && loading.values===true" class="box box-body box-item">
+    <el-empty  description="加载中，请稍后……" />
+  </div>
 </keep-alive>
 <el-backtop :right="100" :bottom="100" />
 </template>
 <script setup>
 import { ArrowRight } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { onBeforeMount, ref, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { axios } from '/src/assets/util/axios'
+import githubTheme from '@kangc/v-md-editor/lib/theme/github'
 /* 引入v-ace-editor */
 import { VAceEditor } from 'vue3-ace-editor'
 import 'ace-builds/src-noconflict/mode-yaml'

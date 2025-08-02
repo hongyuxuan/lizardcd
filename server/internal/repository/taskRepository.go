@@ -23,12 +23,12 @@ func NewTaskRepository(ctx context.Context, svcCtx *svc.ServiceContext) *TaskRep
 }
 
 func (t *TaskRepository) DeleteTaskHistory(taskHistory commontypes.TaskHistory) (err error) {
-	if err = t.svcCtx.Sqlite.WithContext(context.WithValue(t.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteHistoryWorkload")).Delete(&commontypes.TaskHistoryWorkload{}, "task_history_id = ?", taskHistory.Id).Error; err != nil {
+	if err = t.svcCtx.Database.WithContext(context.WithValue(t.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteHistoryWorkload")).Delete(&commontypes.TaskHistoryWorkload{}, "task_history_id = ?", taskHistory.Id).Error; err != nil {
 		t.Logger.Error(err)
 		return
 	}
 	t.Logger.Infof("Successfully delete task_history_workload for task_history_id=%s", taskHistory.Id)
-	if err = t.svcCtx.Sqlite.WithContext(context.WithValue(t.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteTaskHistory")).Delete(&taskHistory).Error; err != nil {
+	if err = t.svcCtx.Database.WithContext(context.WithValue(t.ctx, commontypes.TraceIDKey{}, "sqlite.DeleteTaskHistory")).Delete(&taskHistory).Error; err != nil {
 		t.Logger.Error(err)
 		return
 	}

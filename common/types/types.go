@@ -26,7 +26,23 @@ func (s StringList) Value() (driver.Value, error) {
 }
 
 func (s *StringList) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &s)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &s)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &s)
+	}
+}
+
+type ServiceMeta struct {
+	Cluster       string   `json:"cluster,omitempty"`
+	Namespace     string   `json:"namespace,omitempty"`
+	Protocol      string   `json:"protocol,omitempty"`
+	Service       string   `json:"service,omitempty"`
+	ServiceName   string   `json:"service_name,omitempty"`
+	ServiceType   string   `json:"service_type,omitempty"`
+	ServiceSource string   `json:"service_source,omitempty"`
+	Labels        []string `json:"labels,omitempty"`
 }
 
 /*********** map[string]string ***********/
@@ -42,7 +58,12 @@ func (s StringMap) Value() (driver.Value, error) {
 }
 
 func (s *StringMap) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &s)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &s)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &s)
+	}
 }
 
 /*********** map[string]interface{} ***********/
@@ -58,7 +79,12 @@ func (s InterfaceMap) Value() (driver.Value, error) {
 }
 
 func (s *InterfaceMap) Scan(value interface{}) error {
-	return json.Unmarshal([]byte(value.(string)), &s)
+	switch v := value.(type) {
+	case []uint8:
+		return json.Unmarshal(v, &s)
+	default:
+		return json.Unmarshal([]byte(value.(string)), &s)
+	}
 }
 
 type GetDataReq struct {
@@ -139,4 +165,44 @@ type DolphinschedulerResponse struct {
 	Data    interface{} `json:"data"`
 	Failed  bool        `json:"failed"`
 	Success bool        `json:"success"`
+}
+
+type HealthCheck struct {
+	Type   string `json:"type"`
+	Method string `json:"method,optional,omitempty"`
+	Port   string `json:"port,optional,omitempty"`
+	Uri    string `json:"uri,optional,omitempty"`
+	Shell  string `json:"shell,optional,omitempty"`
+}
+
+type SSHDeployReq struct {
+	ArtifactUrl    string            `json:"artifact_url"`
+	ArtifactHeader map[string]string `json:"artifact_header"`
+	DeployPath     string            `json:"deploy_path"`
+	SSHUser        string            `json:"ssh_user,optional"`
+	SSHPort        string            `json:"ssh_port,optional"`
+	SSHPassword    string            `json:"ssh_pass,optional"`
+	SSHPrivateKey  string            `json:"ssh_private_key,optional"`
+	CommandType    string            `json:"command_type,optional"`
+	PreCommand     string            `json:"pre_command,optional"`
+	StartCommand   string            `json:"start_command"`
+	HealthCheck    HealthCheck       `json:"health_check,optional"`
+	Targets        []string          `json:"targets"`
+}
+
+type RunTaskReq struct {
+	Id          string     `json:"id,optional"`
+	AppName     string     `json:"app_name"`
+	TaskType    string     `json:"task_type"`
+	TriggerType string     `json:"trigger_type"`
+	Labels      []string   `json:"labels,optional"`
+	Workloads   []Workload `json:"workloads,optional"`
+	ArtifactUrl string     `json:"artifact_url,optional"` // HTTP部署用
+	InitAt      string     `json:"init_at,optional"`
+	Waiting     bool       `json:"waiting,optional"`
+}
+
+type TektonResponseData struct {
+	Results  interface{} `json:"results"`
+	Continue string      `json:"continue,omitempty"`
 }

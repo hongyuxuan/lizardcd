@@ -73,9 +73,17 @@
         <myTips type="info">Lizardcd回调地址，固定写法：<br>http://{UI_URL:PORT}/callback.html</myTips>
       </el-form-item>
       <el-divider><span style="color:#b4b4b4">属性映射</span></el-divider>
+      <el-form-item label="用户ID" prop="id_jsonpath">
+        <el-input v-model="form.id_jsonpath" size="large" placeholder="$.userid" />
+        <myTips type="info">通过jsonpath从第三方平台提取用户ID</myTips>
+      </el-form-item>
       <el-form-item label="用户账户" prop="user_jsonpath">
         <el-input v-model="form.user_jsonpath" size="large" placeholder="$.username" />
         <myTips type="info">通过jsonpath从第三方平台提取用户名</myTips>
+      </el-form-item>
+      <el-form-item label="用户邮箱" prop="email_jsonpath">
+        <el-input v-model="form.email_jsonpath" size="large" placeholder="$.email" />
+        <myTips type="info">通过jsonpath从第三方平台提取邮箱</myTips>
       </el-form-item>
       <el-form-item label="用户头像" prop="avatar_jsonpath">
         <el-input v-model="form.avatar_jsonpath" size="large" placeholder="$.avatar_url" />
@@ -117,6 +125,7 @@ const rules = reactive({
   userinfo_url: [{required: true, message: '请填写userinfo_url'}],
   callback_url: [{required: true, message: '请填写callback_url'}],
   user_jsonpath: [{required: true, message: '请填写用户账户'}],
+  id_jsonpath: [{required: true, message: '请填写用户ID'}],
 })
 const edit = ref(false)
 const authorize = ref(null)

@@ -20,12 +20,12 @@ var executeCmd = &cobra.Command{
 		common.InitConfig()
 
 		var res *types.TaskHistoryRes
-		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/db/task_history/%s", id)).SetResult(&res).Do(context.Background()).Err; err != nil {
+		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/db/task_history/%s", id)).SetSuccessResult(&res).Do(context.Background()).Err; err != nil {
 			common.PrintFatal("failed to get task history with id=%s: %v", id, err)
 		}
 
 		var executeRes *types.TaskExecuteRes
-		if err := common.LizardServer.Post(fmt.Sprintf("/lizardcd/task/execute/%s", id)).SetResult(&executeRes).Do(context.Background()).Err; err != nil {
+		if err := common.LizardServer.Post(fmt.Sprintf("/lizardcd/task/execute/%s", id)).SetSuccessResult(&executeRes).Do(context.Background()).Err; err != nil {
 			common.PrintFatal("failed to execute task with id=%s: %v", id, err)
 		} else {
 			common.PrintSuccess("successful submit task, id=%s", id)
@@ -34,6 +34,6 @@ var executeCmd = &cobra.Command{
 }
 
 func init() {
-	executeCmd.Flags().StringVar(&id, "id", "", "task id (required)")
+	executeCmd.Flags().StringVar(&id, "id", "", "task id")
 	executeCmd.MarkFlagRequired("id")
 }

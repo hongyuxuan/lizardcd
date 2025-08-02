@@ -42,7 +42,7 @@ var showCmd = &cobra.Command{
 		table.SetAutoWrapText(false)
 
 		var res *types.TaskHistoryRes
-		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/db/task_history/%s", id)).SetResult(&res).Do(context.Background()).Err; err != nil {
+		if err := common.LizardServer.Get(fmt.Sprintf("/lizardcd/db/task_history/%s", id)).SetSuccessResult(&res).Do(context.Background()).Err; err != nil {
 			common.PrintFatal("failed to get task history: %v", err)
 		}
 

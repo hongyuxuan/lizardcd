@@ -27,13 +27,16 @@ func NewListtargetsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Listt
 
 func (l *ListtargetsLogic) Listtargets() (resp *types.Response, err error) {
 	_, role, _, namespaces := utils.GetPayload(l.ctx)
-	var targets []string
-	for k := range l.svcCtx.AgentList {
+	targets := []map[string]interface{}{}
+	for k, v := range l.svcCtx.AgentList {
 		target, err := utils.GetTarget(l.svcCtx.Config.ServicePrefix, k, namespaces, role)
 		if err != nil {
 			continue
 		}
-		targets = append(targets, target)
+		targets = append(targets, map[string]interface{}{
+			"ip":     target,
+			"labels": v.Labels,
+		})
 	}
 	resp = &types.Response{
 		Code: http.StatusOK,

@@ -3,11 +3,11 @@ package logic
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
 
 	"github.com/hongyuxuan/lizardcd/agent/internal/svc"
 	"github.com/hongyuxuan/lizardcd/agent/types/agent"
+	commonsvc "github.com/hongyuxuan/lizardcd/common/svc"
+	"github.com/hongyuxuan/lizardcd/common/utils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -18,7 +18,7 @@ type ApplyYamlLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
-	K8sService *svc.K8sService
+	K8sService *commonsvc.K8sService
 }
 
 func NewApplyYamlLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ApplyYamlLogic {
@@ -26,40 +26,31 @@ func NewApplyYamlLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ApplyYa
 		ctx:        ctx,
 		svcCtx:     svcCtx,
 		Logger:     logx.WithContext(ctx),
-		K8sService: svc.GetK8sService(ctx, svcCtx),
+		K8sService: commonsvc.NewK8sService(ctx, svcCtx.Clientset, svcCtx.Dynamicclient, svcCtx.TektonClient, svcCtx.TriggerClient),
 	}
 }
 
-func (l *ApplyYamlLogic) ApplyYaml(in *agent.YamlRequest) (*agent.Response, error) {
-	yamlArr := strings.Split(in.Ymlstring, "---")
-	var chArr []chan map[string]interface{}
-	for _, y := range yamlArr {
-		if len(strings.TrimSpace(y)) == 0 {
-			continue
-		}
-		taskResult := make(chan map[string]interface{})
-		chArr = append(chArr, taskResult)
-		go l.K8sService.UpdateFromYaml(in.Namespace, y, in.Kind, taskResult)
-	}
-	failed := []string{}
+func (l *ApplyYamlLogic) ApplyYaml(in *agent.YamlRequest) (resp *agent.Response, err error) {
 	var workloadType, workloadName string
 	firstWorkload := true
-	for _, ch := range chArr {
-		res := <-ch
-		if res["success"] == false {
-			failed = append(failed, res["message"].(string))
-		} else {
-			if (res["workloadType"].(string) == "Deployment" ||
-				res["workloadType"].(string) == "StatefulSet" ||
-				res["workloadType"].(string) == "DaemonSet") && firstWorkload { // 返回yaml里的第一个工作负载
-				workloadType = res["workloadType"].(string)
-				workloadName = res["workloadName"].(string)
-				firstWorkload = false
-			}
+	unstructureList, err := utils.ParseYaml(in.Namespace, in.Ymlstring)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Parse YAML failed, error: %v", err)
+	}
+	for _, unstructureObj := range unstructureList {
+		resourceName := unstructureObj.GetName()
+		if resourceName == "" {
+			resourceName = unstructureObj.GetGenerateName()
+		}
+		resourceType := unstructureObj.GetKind()
+		if (resourceType == "Deployment" || resourceType == "StatefulSet" || resourceType == "DaemonSet") && firstWorkload {
+			workloadType = resourceType
+			workloadName = resourceName
+			firstWorkload = false
 		}
 	}
-	if len(failed) > 0 {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("update YAML failed, errmsg: %v", failed))
+	if err := l.K8sService.UpdateFromYaml(in.Namespace, in.Ymlstring, in.Kind); err != nil {
+		return nil, status.Errorf(codes.Internal, "Update YAML failed, error: %v", err)
 	}
 	data := struct {
 		WorkloadType string

@@ -1,6 +1,6 @@
 FROM alpine:3.19.1
 
-RUN apk add sqlite
+RUN set -ex && apk add sqlite
 
 ADD bin/migrate /opt
 ADD manifests /opt/manifests

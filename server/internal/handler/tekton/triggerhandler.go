@@ -17,13 +17,8 @@ func TriggerHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			httpx.Error(w, errorx.NewError(http.StatusBadRequest, err.Error(), nil))
 			return
 		}
-		secret := r.Header.Get("X-Gitlab-Token")
-		if secret == "" {
-			httpx.Error(w, errorx.NewDefaultError("HTTP header X-Gitlab-Token cannot be empty"))
-			return
-		}
 		l := tekton.NewTriggerLogic(r.Context(), svcCtx)
-		resp, err := l.Trigger(&req, secret)
+		resp, err := l.Trigger(&req)
 		if err != nil {
 			httpx.Error(w, err)
 		} else {

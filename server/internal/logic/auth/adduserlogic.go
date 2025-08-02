@@ -29,7 +29,7 @@ func NewAdduserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *AdduserLo
 
 func (l *AdduserLogic) Adduser(req *types.AddUserReq) (resp *types.Response, err error) {
 	generatedPassword := utils.GenerateRandomString(10)
-	if err = utils.AddUser(req.Username, generatedPassword, req.Role, req.Tenant, l.svcCtx.Sqlite); err != nil {
+	if err = utils.AddUser(req.Username, generatedPassword, req.Role, req.Tenant, l.svcCtx.Database); err != nil {
 		err = errorx.NewDefaultError("Failed to create user \"%s\": %v", req.Username, err)
 		l.Logger.Error(err)
 		return
@@ -37,7 +37,7 @@ func (l *AdduserLogic) Adduser(req *types.AddUserReq) (resp *types.Response, err
 		l.Logger.Infof("Successfully create user \"%s\" with password \"\"", req.Username, generatedPassword)
 	}
 	// add user must also add related settings
-	utils.AddSettings(strings.Split(req.Tenant, ",")[0], l.svcCtx.Sqlite)
+	utils.AddSettings(strings.Split(req.Tenant, ",")[0], l.svcCtx.Database)
 
 	resp = &types.Response{
 		Code:    http.StatusOK,

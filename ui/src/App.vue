@@ -1,8 +1,8 @@
 <template>
   <el-container>
-    <el-aside width="240px">
+    <el-aside width="240px" style="z-index:6">
       <el-container>
-        <el-main style="padding:0">
+        <el-main style="padding:0 0 60px">
           <Sidebar />
         </el-main>
         <el-footer style="position: fixed;bottom:0;">
@@ -24,11 +24,12 @@
 <script setup>
 import _ from 'lodash'
 import { ref, computed, onBeforeMount, watch, nextTick, provide } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import Sidebar from './components/sidebar.vue'
 import HeadBar from './components/header.vue'
 import { axios } from '/src/assets/util/axios'
+import { getSettings } from '/src/assets/util/common'
 import * as echarts from 'echarts'
 provide('ec', echarts)
 /* 变量定义 */
@@ -49,9 +50,9 @@ watch(
 )
 /* 生命周期函数 */
 onBeforeMount(async () => {
-  checkLogin()
+  await checkLogin()
   getVersion()
-  getSettings()
+  store.state.settings = await getSettings()
 })
 /* methods */
 const checkLogin = async () => {
@@ -61,24 +62,13 @@ const checkLogin = async () => {
     }
   })
   localStorage.username = response.username
-  store.state.username = response.username
-  store.state.role = response.role
-  store.state.avatar = response.profile?.avatar
   localStorage.tenant = response.tenant
+  delete response.password
+  response.profile ||= {}
+  store.state.userInfo = response
 }
 const getVersion = async () => {
   version.value = await axios.get(`/lizardcd/server/version`)
-}
-const getSettings = async () => {
-  let tenants = localStorage.tenant?.split(",") || []
-  let response = await axios.get(`/lizardcd/db/settings?size=1000&filter=tenant==${tenants[0]}`)
-  let settings = {}
-  for(let x of response.results) {
-    if(x.setting_value === 'true' || x.setting_value === 'false')
-      x.setting_value = JSON.parse(x.setting_value)
-    settings[x.setting_key] = x.setting_value
-  }
-  store.state.settings = settings
 }
 </script>
 

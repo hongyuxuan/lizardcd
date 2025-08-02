@@ -1,0 +1,290 @@
+<template>
+<div class="box box-item">
+  <div class="box-body" style="padding-top:20px;padding-bottom:0">
+    <el-alert type="warning" show-icon style="margin-bottom:15px">
+      <template #title>
+        关于 ApprovalTask 配置参考：<el-link href="https://github.com/automatiko-io/automatiko-approval-task/" underline="never" type="primary" target="_blank">ApprovalTask</el-link>
+      </template>
+    </el-alert>
+    <el-row>
+      <el-col :span="18">
+        <el-button-group>
+          <el-button :icon="Refresh" size="large" style="margin-right:5px" @click="getList(true)" />
+          <el-select v-model="namespace" placeholder="请选择命名空间" clearable filterable @change="getList(true)" style="width:250px;margin-right:5px" size="large">
+            <el-option v-for="(item) in props.namespaceList" :key="item" :label="item" :value="item" />
+          </el-select>
+          <el-input v-model="searchKey" placeholder="输入名称进行搜索" size="large" :prefix-icon="Search" @change="getPage(1)" clearable style="width:250px;" />
+        </el-button-group>
+      </el-col>
+      <el-col :span="6">
+        <el-dropdown @command="handleMore" class="pull-right">
+          <el-button size="large">更多操作<el-icon class="el-icon--right"><arrow-down /></el-icon></el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="{action:'deleteBatch'}">批量删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-button class="pull-right" size="large" type="primary" @click="show.yaml=true;edit=false;form={content:'',variables:[]}" style="margin-right:5px">+ 创建ApprovalTask</el-button>
+      </el-col>
+    </el-row>
+    <el-table 
+      :data="list" 
+      v-loading="loading"
+      element-loading-text="奋力加载中..."
+      @selection-change="select"
+      class="line-height25" 
+      style="width:100%;margin-top:10px;min-height:150px">
+      <el-table-column type="selection" width="45" />
+      <el-table-column prop="metadata.name" label="名称" min-width="250" />
+      <el-table-column label="ApprovalUrl" min-width="350">
+        <template #default="scope">
+          <el-link :href="scope.row.status?.approvalUrl" type="primary" underline="never" target="_blank">{{ scope.row.status?.approvalUrl }}</el-link>
+        </template>
+      </el-table-column>
+      <el-table-column label="创建时间" width="170">
+        <template #default="scope">
+          {{ moment(scope.row.metadata?.creationTimestamp).format('YYYY-MM-DD HH:mm:ss') }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="100">
+        <template #default="scope">
+          <el-button icon="EditPen" circle @click="editOne(scope.row)"></el-button>
+          <el-popconfirm title="确定删除?" confirm-button-text="确认" cancel-button-text="取消" @confirm="deleteOne(scope.row)">
+            <template #reference>
+              <el-button icon="Close" circle />
+            </template>
+          </el-popconfirm>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-pagination 
+      class="pull-right"
+      background 
+      v-model:page-size="pageSize"
+      :page-sizes="[10, 20, 50, 100]"
+      layout="total, sizes, prev, pager, next, jumper" 
+      :total="pageTotal"
+      @size-change="handleSizeChange"
+      @current-change="getPage"
+      v-model:current-page="current" />
+  </div>
+</div>
+<el-drawer v-model="show.yaml" direction="rtl" size="700px">
+  <template #header>
+    <h4>{{ edit === true ? '编辑YAML' : '创建ApprovalTask' }}</h4>
+  </template>
+  <template #default>
+    <el-form ref="task" label-width="100px">
+      <el-form-item label="从模板导入" v-if="edit===false">
+        <el-select 
+          v-model="form.templates" 
+          placeholder="请选择模板" 
+          value-key="id" 
+          clearable 
+          size="large"
+          style="width:100%" 
+          @change="selectTemplate">
+          <el-option v-for="item in templateList" :key="item.id" :label="item.name" :value="item">
+            <span style="float:left">{{item.name}}</span>
+          </el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="配置YAML">
+        <v-ace-editor
+          v-model:value="form.content"
+          lang="yaml"
+          theme="chrome"
+          style="width:100%"
+          :options="{
+            enableBasicAutocompletion: true,
+            enableSnippets: true,
+            enableLiveAutocompletion: true,
+            tabSize: 2,
+            showPrintMargin: false,
+            fontSize: 14,
+            maxLines: 5000,
+            minLines: 10,
+        }" />
+      </el-form-item>
+      <el-form-item label="模板变量" v-if="edit===false">
+        <table class="table table-bordered" style="margin-bottom:0">
+          <thead><tr><th>变量名</th><th>默认变量值</th></tr></thead>
+          <tbody>
+          <tr v-for="(item,index) in form.variables" :key="index" >
+            <td><el-input v-model="item.key" size="large" /></td>
+            <td><el-input v-model="item.value" size="large" /></td>
+            <td width="80">
+              <el-button-group>
+                <el-button icon="Plus" circle @click="addVar(index)"></el-button>
+                <el-button icon="Close" circle @click="removeVar(index)"></el-button>
+              </el-button-group>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </el-form-item>
+    </el-form>
+  </template>
+  <template #footer>
+    <div style="flex: auto">
+      <el-button @click="show.yaml=false">取消</el-button>
+      <el-button type="primary" @click="submitYaml">提交</el-button>
+    </div>
+  </template>
+</el-drawer>
+</template>
+<script setup>
+import { Search,Refresh } from '@element-plus/icons-vue'
+import { onBeforeMount, ref, computed } from 'vue'
+import { useStore } from 'vuex'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { axios } from '/src/assets/util/axios'
+import moment from 'moment'
+import _ from 'lodash'
+/* 引入v-ace-editor */
+import { VAceEditor } from 'vue3-ace-editor'
+import 'ace-builds/src-noconflict/mode-yaml'
+import 'ace-builds/src-noconflict/theme-chrome'
+import 'ace-builds/src-noconflict/ext-language_tools'
+/* 变量定义 */
+const props = defineProps({
+  defaultTekton: { type: Object }, 
+  namespaceList: { type: Array }, 
+})
+const store = useStore()
+const userInfo = computed(() => {
+  return store.state.userInfo
+})
+const all = ref([])
+const searchKey = ref("")
+const list = ref([])
+const pageSize = ref(10)
+const pageTotal = ref(0)
+const current = ref(1)
+const namespace = ref("")
+const loading = ref(false)
+const show = ref({
+  yaml: false
+})
+const selected = ref([])
+const edit = ref(false)
+const form = ref({content:'',variables:[],templates:{}})
+const templateList = ref([])
+/* 生命周期函数 */
+onBeforeMount(async () => {
+  getTemlates()
+})
+/* methods */
+const getList = async (ifLoading) => {
+  if(ifLoading) loading.value = true
+  if(props.defaultTekton.cluster !== "" && namespace.value !== "") {
+    let response = await axios.get(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/approvaltasks`)
+    for(let x of response.results) {
+      if(x.status?.approvalUrl) {
+        x.status.approvalUrl += `?user=${namespace.value}`
+      }
+    }
+    all.value = _.sortBy(response.results, 'metadata.creationTimestamp').reverse()
+    getPage(current.value)
+  }
+  if(ifLoading) loading.value = false
+}
+const getPage = async (page) => {
+  let tmpList = all.value
+  if(searchKey.value !== '') {
+    tmpList = all.value.filter(n => n.metadata.name.includes(searchKey.value))
+  }
+  pageTotal.value = tmpList.length
+  list.value = tmpList.slice((page-1)*pageSize.value, page*pageSize.value)
+}
+const getTemlates = async () => {
+  let response = await axios.get(`/lizardcd/db/yaml_template?filter=type==tekton_approvaltask&page=1&size=100&sort=update_at desc`)
+  templateList.value = response.results.map(x => {
+    x.variables = JSON.parse(x.variables)
+    return x
+  })
+}
+const selectTemplate = (val) => {
+  if(val) {
+    form.value.content = val.content
+    form.value.variables = val.variables
+  }
+  else {
+    form.value.content = ""
+  }
+}
+const editOne = async (row) => {
+  show.value.yaml = true
+  edit.value = true
+  form.value.content = await axios.get(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/approvaltasks/${row.metadata.name}/yaml?withStatus=all`)
+}
+const deleteOne = async (row) => {
+  await axios.delete(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/approvaltasks/${row.metadata.name}`)
+  ElMessage.success({message: `删除ApprovalTask成功`})
+  setTimeout(async () => {
+    await getList(true)
+  }, 500)
+}
+const submitYaml = async () => {
+  if(props.defaultTekton.cluster === "" || namespace.value == "") {
+    ElMessage.warning({message: '请指定集群和命名空间'})
+    return
+  } 
+  let params = Object.assign({}, form.value)
+  delete params.templates
+  let vars = {}
+  for(let x of params.variables) {
+    vars[x.key] = x.value
+  }
+  params.variables = vars
+  try {
+    if(edit.value === false) {
+      await axios.post(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/apply?kind=ApprovalTask`, params)
+      ElMessage.success({message: `创建ApprovalTask成功`})
+    }
+    else {
+      delete params.variables
+      await axios.post(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/apply?kind=ApprovalTask`, params)
+      ElMessage.success({message: `更新ApprovalTask成功`})
+    }
+    show.value.yaml = false
+    setTimeout(async () => {
+      await getList(true)
+    }, 500)
+  } catch(e) {
+    ElMessage.error({message: e})
+  }
+}
+const handleSizeChange = async (size) => {
+  pageSize.value = size
+  await getList(true)
+}
+const handleMore = async (command) => {
+  if(selected.value.length === 0) {
+    ElMessage.warning({message: '请勾选ApprovalTask'})
+    return
+  }
+  switch(command.action) {
+    case "deleteBatch": {
+      await ElMessageBox.confirm('确定删除？','警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }).then(async () => {
+        await Promise.all(selected.value.map(x => {
+          return axios.delete(`/lizardcd/tekton/cluster/${props.defaultTekton.cluster}/namespace/${namespace.value}/approvaltasks/${x.metadata.name}`)
+        }))
+        ElMessage.success({message: `删除ApprovalTask成功`})
+        setTimeout(async () => {
+          await getList(true)
+        }, 500)
+      }).catch(() =>{})
+      break
+    }
+  }
+}
+const select = (val) => {
+  selected.value = val
+}
+</script>
